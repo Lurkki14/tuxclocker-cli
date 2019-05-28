@@ -6,10 +6,12 @@
 // Enums for types of sensor reading
 enum sensor_type {SENSOR_TEMP, SENSOR_FAN_PERCENTAGE, SENSOR_CORE_CLOCK};
 
-// Return the file descriptors for valid AMD GPUs and the amount in len, NULL on failure
-int *tc_amd_get_gpu_fds(uint8_t *len);
+/* Return the file descriptors for valid AMD GPUs in fds and the amount in len, takes the
+   size of the array in size. Returns 1 when size is less than the mount of file descriptors.
+*/
+int tc_amd_get_gpu_fds(uint8_t *len, int **fds, size_t size);
 // Return the device handle for the AMD GPU by file descriptor, NULL on failure
-void  *tc_amd_get_gpu_handle_by_fd(int fd);
+void *tc_amd_get_gpu_handle_by_fd(int fd);
 
 /* Monitoring function. This requires a device handle and a pointer to return the data.
    Returns zero on success like amdgpu functions themselves.	

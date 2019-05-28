@@ -73,9 +73,10 @@ void print_gpu_info() {
 	if (libtc_amd != NULL) {
 		uint8_t amd_gpu_count = 0;
 		
-		int *(*amd_get_gpu_fds)(uint8_t*) = dlsym(libtc_amd, "tc_amd_get_gpu_fds");
-		int *fds = amd_get_gpu_fds(&amd_gpu_count);
-		if (fds == NULL) {
+		int (*amd_get_gpu_fds)(uint8_t*, int**, size_t) = dlsym(libtc_amd, "tc_amd_get_gpu_fds");
+		int *fds = malloc(sizeof(int) * MAX_GPUS);
+		int retval = amd_get_gpu_fds(&amd_gpu_count, &fds, MAX_GPUS);
+		if (retval != 0) {
 			fprintf(stderr, "Error: failed to get file descriptors for AMD GPUs\n");
 			return;
 		}

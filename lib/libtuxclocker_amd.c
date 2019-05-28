@@ -10,7 +10,8 @@
 #include <libdrm/amdgpu_drm.h>
 
 #include "libtuxclocker_amd.h"
-int *tc_amd_get_gpu_fds(uint8_t *len) {
+
+int tc_amd_get_gpu_fds(uint8_t *len, int **fds, size_t size) {
 	const char *dev_dir_name = "/dev/dri";
 	// Try to initialize all renderD* devices in /dev/dri
 	DIR *dev_dir;
@@ -22,7 +23,7 @@ int *tc_amd_get_gpu_fds(uint8_t *len) {
 	dev_dir = opendir(dev_dir_name);
 	if (dev_dir == NULL)
 		// Couldn't open the directory
-		return NULL;		
+		return 1;		
 
 	// Try to open the files containing renderD
 	int fd = 0;
@@ -44,9 +45,17 @@ int *tc_amd_get_gpu_fds(uint8_t *len) {
 				fd_arr[amount - 1] = fd;
 			}
 		}
-	}
+	}	
+	// Return 1 if the array is too small
+	if (amount > size)
+		return 1;
+	// Write the results into array and free memory
+	for (uint8_t i=0; i<amount; i++)
+		(*fds)[i] = fd_arr[i];
+	
+	free(fd_arr);
 	*len = amount;
-	return fd_arr;
+	return 0;
 }
 
 void *tc_amd_get_gpu_handle_by_fd(int fd) {
