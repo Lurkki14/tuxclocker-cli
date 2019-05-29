@@ -10,6 +10,7 @@
 #include <libdrm/amdgpu_drm.h>
 
 #include "libtuxclocker_amd.h"
+#include "libtuxclocker.h"
 
 int tc_amd_get_gpu_fds(uint8_t *len, int **fds, size_t size) {
 	const char *dev_dir_name = "/dev/dri";
@@ -45,10 +46,14 @@ int tc_amd_get_gpu_fds(uint8_t *len, int **fds, size_t size) {
 				fd_arr[amount - 1] = fd;
 			}
 		}
-	}	
+	}
+	closedir(dev_dir);	
+
 	// Return 1 if the array is too small
-	if (amount > size)
+	if (amount > size) {
+		free(fd_arr);
 		return 1;
+	}
 	// Write the results into array and free memory
 	for (uint8_t i=0; i<amount; i++)
 		(*fds)[i] = fd_arr[i];
@@ -80,6 +85,14 @@ int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type) {
 	return amdgpu_query_sensor_info(*dev_handle, sensor_enum, sizeof(reading), reading);
 }
 
-char *tc_amd_get_gpu_name(void *handle) {	
-	return strdup(amdgpu_get_marketing_name(*(amdgpu_device_handle*) handle));
+int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]) {	
+	const char *gpu_name = amdgpu_get_marketing_name(*(amdgpu_device_handle*) handle);
+	size_t name_len = strlen(gpu_name);
+	if (name_len > buf_len + 1)
+		// String to copy to is too small
+		return 1;
+	
+	// Copy the name to the buffer
+	snprintf(*buf, name_len + 1, "%s", gpu_name);
+	return 0;
 }

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../lib/libtuxclocker_amd.h"
+#include "../lib/libtuxclocker.h"
 #include "tuxclocker-cli.h"
 
 // Library handles for different GPU vendors
@@ -60,8 +60,7 @@ int main(int argc, char **argv) {
 			print_gpu_info();
 			break;
 		}
-	}	
-
+	}
 	return 0;
 }
 
@@ -70,6 +69,7 @@ void print_gpu_info() {
 	char **gpu_names = NULL;
 	uint8_t gpu_count = 0;
 	size_t longest_name_len = 0; // Store the size of the longest GPU name
+	char buf[MAX_STRLEN]; // Store GPU names
 	if (libtc_amd != NULL) {
 		uint8_t amd_gpu_count = 0;
 		
@@ -80,30 +80,38 @@ void print_gpu_info() {
 			fprintf(stderr, "Error: failed to get file descriptors for AMD GPUs\n");
 			return;
 		}
+		// Allocate more memory for GPU names
+		gpu_names = realloc(gpu_names, sizeof(char*) * gpu_count + amd_gpu_count);
 
 		void *(*amd_get_gpu_handle_by_fd)(int) = dlsym(libtc_amd, "tc_amd_get_gpu_handle_by_fd");
-		char *(*amd_get_gpu_name)(void*) = dlsym(libtc_amd, "tc_amd_get_gpu_name");
-		// Get the handles and names
+		int (*amd_get_gpu_name)(void*, size_t, char(*)[]) = dlsym(libtc_amd, "tc_amd_get_gpu_name");
+		// Get the handles and names		
 		for (uint8_t i=0; i<amd_gpu_count; i++) {
+			gpu_count++;
 			void *handle = amd_get_gpu_handle_by_fd(fds[i]);
 			if (handle == NULL)
 				continue;
-			gpu_count++;
-			char *gpu_name = amd_get_gpu_name(handle);	
-		       
-			size_t name_len = strlen(gpu_name);	
+
+			if (amd_get_gpu_name(handle, MAX_STRLEN, &buf) != 0)
+				continue;
+
+			size_t name_len = strlen(buf);
 			if (name_len > longest_name_len)
-				longest_name_len = name_len;		
-			gpu_names = realloc(gpu_names, gpu_count);
-			gpu_names[gpu_count - 1] = gpu_name;
-			
-			//free(handle);						
-		}	
+				longest_name_len = name_len;
+
+			gpu_names[gpu_count - 1] = strdup(buf);
+			free(handle);						
+		}
+		free(fds);	
 	}	
 	// Print the GPU names and indices
 	printf("%-*s %8s\n", longest_name_len, "GPU", "Index");
 	for (uint8_t i=0; i<gpu_count; i++) {
 		printf("%-*s %8u\n", longest_name_len, gpu_names[i], i);
 	}
+	// Free the memory
+	for (int i=0; i<gpu_count; i++)
+		free(gpu_names[i]);	
+
 	free(gpu_names);
 }	

@@ -3,8 +3,7 @@
 
 #include <stdint.h>
 
-// Enums for types of sensor reading
-enum sensor_type {SENSOR_TEMP, SENSOR_FAN_PERCENTAGE, SENSOR_CORE_CLOCK};
+#include "libtuxclocker.h"
 
 /* Return the file descriptors for valid AMD GPUs in fds and the amount in len, takes the
    size of the array in size. Returns 1 when size is less than the mount of file descriptors.
@@ -18,7 +17,7 @@ void *tc_amd_get_gpu_handle_by_fd(int fd);
 */
 int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type);
 
-// Return the GPU name
-char *tc_amd_get_gpu_name(void *handle);
+// Return 0 on success. Pass the buffer for the string to be copied to and its size
+int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]);
 
 #endif
