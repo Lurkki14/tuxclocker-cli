@@ -63,31 +63,141 @@ int tc_amd_get_gpu_fds(uint8_t *len, int **fds, size_t size) {
 	return 0;
 }
 
-void *tc_amd_get_gpu_handle_by_fd(int fd) {
+
+
+int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle) {
+	if (sizeof(amdgpu_device_handle) > size)
+		// Pointer not big enough
+		return 1;
+
 	uint32_t major, minor;
-	amdgpu_device_handle *handle = malloc(sizeof(amdgpu_device_handle));
-	if (amdgpu_device_initialize(fd, &major, &minor, handle) == 0)
+	if (amdgpu_device_initialize(fd, &major, &minor, (amdgpu_device_handle*) handle) == 0)
 		// Success
-		return handle;
-	free(handle);
-	return NULL;
+		return 0;
+	
+	return 1;
 }
+
+int tc_amd_get_hwmon_paths(char ***hwmon_paths, size_t arr_len, size_t str_len) {
+	const char *dev_dir_name = "/dev/dri";
+	DIR *dev_dir;
+	struct dirent *dev_entry;
+	char dev_abs_path[128];
+	char **dev_file_names = NULL;
+
+        // Open the directory
+        dev_dir = opendir(dev_dir_name);
+        if (dev_dir == NULL)
+                // Couldn't open the directory
+                return 1;
+
+        // Try to open the files containing renderD
+        int fd = 0;
+	uint8_t amount = 0;
+        uint32_t major, minor;
+
+	while ((dev_entry = readdir(dev_dir)) != NULL) {
+		if (strstr(dev_entry->d_name, "renderD") != NULL) {
+			snprintf(dev_abs_path, 128, "%s/%s", dev_dir_name, dev_entry->d_name);
+			
+			fd = open(dev_abs_path, O_RDONLY);
+			if (fd < 0)
+				continue;
+			
+			amdgpu_device_handle dev_handle;
+			if (amdgpu_device_initialize(fd, &major, &minor, &dev_handle) == 0) {
+				// Success
+				amount++;
+				// Add the name of the renderD file to the list
+				dev_file_names = realloc(dev_file_names, amount);
+				dev_file_names[amount - 1] = malloc(sizeof(char*) * 64);
+				snprintf(dev_file_names[amount - 1], 64, "%s", dev_entry->d_name);
+			}
+		}
+	}
+	closedir(dev_dir);
+	
+	if (amount > arr_len)
+		// Not enough space to copy all paths
+		return 1;
+
+	// Find the correct directory in /sys/class/drm/renderD(n)/device/hwmon
+	const char *drm_dir = "/sys/class/drm";
+	char **paths = malloc(sizeof(char*) * amount);
+	char buf[128];
+
+	DIR *hwmon_dir;
+	struct dirent *hwmon_entry;
+	size_t longest_path_len = 0;
+	for (uint8_t i=0; i<amount; i++) {
+		// Open the hwmon directory
+		snprintf(buf, 128, "%s/%s/device/hwmon", drm_dir, dev_file_names[i]);
+		hwmon_dir = opendir(buf);
+		if (hwmon_dir == NULL)
+			// Couldn't open the directory
+			return 1;
+		
+		// Find the entry that contains hwmon
+		while ((hwmon_entry = readdir(hwmon_dir)) != NULL) {
+			if (strstr(hwmon_entry->d_name, "hwmon") != NULL) {
+				// Write the path to paths
+				size_t path_len = strlen(buf) + strlen(hwmon_entry->d_name) + 1;
+				if (path_len > longest_path_len)
+					longest_path_len = path_len;
+
+				paths[i] = malloc(path_len);
+				snprintf(paths[i], path_len, "%s/%s", buf, hwmon_entry->d_name);
+				break;
+			}
+		}
+	}
+	// Write the paths to return array
+	if (longest_path_len > str_len)
+		// Not enough space to write the paths
+		return 1;
+	
+	for (uint8_t i=0; i<amount; i++) {
+		snprintf(*hwmon_paths[i], longest_path_len, "%s", paths[i]);
+		free(paths[i]);
+		free(dev_file_names[i]);
+	}
+	free(dev_file_names);
+	free(paths);	
+	return 0;
+}	
 
 int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type) {
 	int sensor_enum = 0;
+	int retval = 0;
 	uint32_t major, minor;
 	switch (sensor_type) {
 		case SENSOR_TEMP : sensor_enum = AMDGPU_INFO_SENSOR_GPU_TEMP; break;
-		default : return -1;
+		case SENSOR_CORE_CLOCK : sensor_enum = AMDGPU_INFO_SENSOR_GFX_SCLK; break;			     
+		case SENSOR_MEMORY_CLOCK : sensor_enum = AMDGPU_INFO_SENSOR_GFX_MCLK; break;
+		case SENSOR_CORE_VOLTAGE : sensor_enum = AMDGPU_INFO_SENSOR_VDDGFX; break;
+		case SENSOR_CORE_UTILIZATION : sensor_enum = AMDGPU_INFO_SENSOR_GPU_LOAD; break;
+		case SENSOR_POWER_DRAW : sensor_enum = AMDGPU_INFO_SENSOR_GPU_AVG_POWER; break;
+		//case SENSOR_FAN_PERCENTAGE : goto sensor_file;			 
+		default : return 1;
 	}
 	amdgpu_device_handle *dev_handle = (amdgpu_device_handle*) handle;
 	
-	return amdgpu_query_sensor_info(*dev_handle, sensor_enum, sizeof(reading), reading);
+	retval = amdgpu_query_sensor_info(*dev_handle, sensor_enum, sizeof(reading), reading);
+	// Change some reading values to be in line with the units defined in libtuxclocker.h
+	switch (sensor_type) {
+		default : return retval;
+		case SENSOR_TEMP : *reading /= 1000; return retval;
+	}
+// Label for sensor enums that are read from a file	
+//sensor_file:
+	
+
 }
 
 int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]) {	
 	const char *gpu_name = amdgpu_get_marketing_name(*(amdgpu_device_handle*) handle);
 	size_t name_len = strlen(gpu_name);
+	// buf_len needs to be 1 byte larger due to null terminator 
 	if (name_len > buf_len + 1)
 		// String to copy to is too small
 		return 1;
