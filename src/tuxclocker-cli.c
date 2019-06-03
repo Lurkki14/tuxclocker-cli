@@ -106,16 +106,19 @@ void print_gpu_sensor_values(int idx) {
 	for (uint8_t i=0; i<gpu_handler_list_len; i++)
 	       gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len); 	
 	
-	int (*amd_get_sensor_value)(void*, int*, int) = dlsym(libtc_amd, "tc_amd_get_gpu_sensor_value");
+	int (*amd_get_sensor_value)(void*, int*, int, const char*) = dlsym(libtc_amd, "tc_amd_get_gpu_sensor_value");
 	int reading = 0;
 	int retval = 0;
+
+	printf("%s\n", gpu_list[0].hwmon_path);
+
 	for (uint8_t i=0; i<gpu_list_len; i++) {
 		printf("Sensor readings for GPU %u:\n", i);
 		switch (gpu_list[i].gpu_type) {
 			case AMD:
 				// Try to print a value for all sensor enums
 				for (int j=SENSOR_TEMP; j<SENSOR_MEMORY_MB_USAGE + 1; j++) { 
-					retval = amd_get_sensor_value(gpu_list[i].amd_handle, &reading, j);
+					retval = amd_get_sensor_value(gpu_list[i].amd_handle, &reading, j, gpu_list[i].hwmon_path);
 					if (retval == 0)
 						printf("\t%s: %d\n", sensor_names[j], reading);
 						//printf("\t%s\n", gpu_list[i].hwmon_path);

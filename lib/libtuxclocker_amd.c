@@ -78,6 +78,79 @@ int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle) {
 	return 1;
 }
 
+int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
+	const char *dev_dir_name = "/dev/dri";
+	// Try to initialize all renderD* devices in /dev/dri
+	DIR *dev_dir;
+	struct dirent *dev_entry;
+	char dev_abs_path[128];
+	int *fd_arr = NULL;
+
+	// Open the directory
+	dev_dir = opendir(dev_dir_name);
+	if (dev_dir == NULL)
+		// Couldn't open the directory
+		return 1;		
+
+	// Try to open the files containing renderD
+	int fd = 0;
+	uint8_t amount = 0;
+	uint32_t major, minor;
+	char **paths = NULL;
+	while ((dev_entry = readdir(dev_dir)) != NULL) {
+		if (strstr(dev_entry->d_name, "renderD") != NULL) {
+			sprintf(dev_abs_path, "%s/%s", dev_dir_name, dev_entry->d_name);
+
+			fd = open(dev_abs_path, O_RDONLY);
+			if (fd < 1)
+				continue;
+			// Create a device handle and try to initialize 
+			amdgpu_device_handle dev_handle;
+			if (amdgpu_device_initialize(fd, &major, &minor, &dev_handle) == 0) {
+				// Success
+				// Find the hwmon folder for the renderD device
+				char hwmon_dir_name[128];
+				snprintf(hwmon_dir_name, 128, "/sys/class/drm/%s/device/hwmon", dev_entry->d_name);
+
+				DIR *hwmon_dir;
+				struct dirent *hwmon_entry;
+				
+				// Open the folder
+				hwmon_dir = opendir(hwmon_dir_name);
+				if (hwmon_dir == NULL)
+					continue;
+
+				// Find the entry containing 'hwmon'
+				while ((hwmon_entry = readdir(hwmon_dir)) != NULL) {
+					if (strstr(hwmon_entry->d_name, "hwmon") != NULL) {
+						// Success
+						char hwmon_path[128];
+						amount++;
+						snprintf(hwmon_path, 128, "%s/%s", hwmon_dir_name, hwmon_entry->d_name);
+						paths = realloc(paths, sizeof(char*) * amount);
+						paths[amount - 1] = strdup(hwmon_path);
+
+						fd_arr = realloc(fd_arr, sizeof(int) * amount);
+						fd_arr[amount - 1] = fd;
+					}
+				}
+				closedir(hwmon_dir);
+			}
+		}
+	}
+	// Assign the results to return pointers
+	*hwmon_paths = malloc(sizeof(char**) * amount);
+	*fds = malloc(sizeof(int) * amount);
+	for (uint8_t i=0; i<amount; i++) {
+		(*hwmon_paths)[i] = paths[i];
+		(*fds)[i] = fd_arr[i];
+	}
+
+	closedir(dev_dir);	
+	*gpu_count = amount;
+	return 0;
+}
+
 int tc_amd_get_hwmon_paths(char ***hwmon_paths, size_t arr_len, size_t str_len) {
 	const char *dev_dir_name = "/dev/dri";
 	DIR *dev_dir;
@@ -166,7 +239,7 @@ int tc_amd_get_hwmon_paths(char ***hwmon_paths, size_t arr_len, size_t str_len) 
 	return 0;
 }	
 
-int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type) {
+int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, const char *hwmon_dir_name) {
 	int sensor_enum = 0;
 	int retval = 0;
 	uint32_t major, minor;
@@ -177,7 +250,7 @@ int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type) {
 		case SENSOR_CORE_VOLTAGE : sensor_enum = AMDGPU_INFO_SENSOR_VDDGFX; break;
 		case SENSOR_CORE_UTILIZATION : sensor_enum = AMDGPU_INFO_SENSOR_GPU_LOAD; break;
 		case SENSOR_POWER_DRAW : sensor_enum = AMDGPU_INFO_SENSOR_GPU_AVG_POWER; break;
-		//case SENSOR_FAN_PERCENTAGE : goto sensor_file;			 
+		case SENSOR_FAN_PERCENTAGE : goto sensor_file;			 
 		default : return 1;
 	}
 	amdgpu_device_handle *dev_handle = (amdgpu_device_handle*) handle;
@@ -189,9 +262,31 @@ int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type) {
 		case SENSOR_TEMP : *reading /= 1000; return retval;
 	}
 // Label for sensor enums that are read from a file	
-//sensor_file:
-	
+sensor_file:
+	// Change directory to the hwmon directory
+	retval = chdir(hwmon_dir_name);
+	if (retval != 0) {
+		return 1;		
+	}
 
+	// Read the file
+	/*FILE *s_file;
+	switch (sensor_enum) {
+		case SENSOR_FAN_PERCENTAGE :
+			s_file = fopen("pwm1", "r");
+			if (s_file == NULL) {
+				return 1;	
+			}
+
+			fscanf(s_file, "%d", reading);
+			*reading = (int) *reading / 2.55;
+			return 0;
+		default : return 1;
+	}*/
+	FILE *file = fopen("pwm1", "r");
+	fscanf(file, "%d", reading);
+	*reading = *reading /= 2.55;
+	return 0;
 }
 
 int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]) {	
