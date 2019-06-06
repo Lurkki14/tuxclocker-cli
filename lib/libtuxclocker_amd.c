@@ -151,6 +151,32 @@ int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
 	return 0;
 }
 
+int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_dir_name) {
+	// Change directory to hwmon directory
+	int retval = chdir(hwmon_dir_name);
+	if (retval != 0)
+		return 1;
+	
+	char hwmon_file_name[64];
+	// Get the file name to write to
+	switch (tunable_enum) {
+		case TUNABLE_FAN_SPEED_PERCENTAGE:
+				snprintf(hwmon_file_name, 64, "pwm1");
+				break;
+		case TUNABLE_POWER_LIMIT:
+				snprintf(hwmon_file_name, 64, "power1_cap");
+				break;
+	}
+	// Open the file for writing
+	FILE *hwmon_file = fopen(hwmon_file_name, "r+");
+	if (hwmon_file == NULL)
+		return 1;
+
+	// Write target value to file
+	fprintf(hwmon_file, "%d", target_value);
+	return 0;
+}
+
 int tc_amd_get_hwmon_paths(char ***hwmon_paths, size_t arr_len, size_t str_len) {
 	const char *dev_dir_name = "/dev/dri";
 	DIR *dev_dir;

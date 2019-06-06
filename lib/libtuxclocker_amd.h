@@ -26,4 +26,7 @@ int tc_amd_get_hwmon_paths(char ***hwmon_paths, size_t arr_len, size_t str_len);
 // Get file descriptors and hwmon paths for all AMD GPUs. Remember to free the memory
 int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count);
 
+// 
+int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_dir_name);
+
 #endif

@@ -3,14 +3,18 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
 
 #include "../lib/libtuxclocker.h"
 #include "amd_functions.h"
 #include "tuxclocker-cli.h"
 
+// Assign extern variables
 char *sensor_names[16] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
         "Core utilization", "Memory Clock", "Memory Utilization", "Memory Usage"};
 
+char *tunable_arg_names[16] = {"fanspeed", "fanmode", "powerlimit", "coreclock", "memclock", "corevoltage", "memvoltage"};
 
 // Library handles for different GPU vendors
 void *libtc_amd = NULL;
@@ -35,6 +39,10 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Error: no usable libraries found, exiting...\n");
 		return 1;
 	}
+	if (argc < 2) {
+		printf("No options specified. Run with --help for help.\n");
+		return 0;
+	}
 
 	// Set the handlers for libraries
 	if (libtc_amd != NULL) {
@@ -54,8 +62,43 @@ int main(int argc, char **argv) {
 			print_gpu_sensor_values(0);
 			break;
 		}
+		if (strcmp(argv[i], "--help") == 0) {
+			print_help();
+			break;
+		}
+		if (strcmp(argv[i], "--set_tunable") == 0) {
+			// Read arguments of the format [index, type, value]
+			if (i + 3 < argc) {
+				// Check if arguments are valid
+				if (!contains_alpha(argv[i+1]) && !contains_digit(argv[i+2]) && !contains_alpha(argv[i+3])) {
+					// Got valid arguments - check the validity of the type in the function
+					assign_gpu_tunable(atoi(argv[i + 1]), argv[i + 2], atoi(argv[i + 3]));
+				}
+			} else {
+				printf("--set_tunable: not enough arguments\n");
+			}				
+			break;
+		}
 	}
 	return 0;
+}
+
+bool contains_digit(const char *str) {
+	while (*str) {
+		if (isdigit(*str) != 0)
+			return true;
+		*str++;
+	}
+	return false;
+}
+
+bool contains_alpha(const char *str) {
+	while (*str) {
+		if (isalpha(*str) != 0)
+			return true;
+		*str++;
+	}
+	return false;
 }
 
 void print_gpu_info() {
@@ -110,8 +153,6 @@ void print_gpu_sensor_values(int idx) {
 	int reading = 0;
 	int retval = 0;
 
-	printf("%s\n", gpu_list[0].hwmon_path);
-
 	for (uint8_t i=0; i<gpu_list_len; i++) {
 		printf("Sensor readings for GPU %u:\n", i);
 		switch (gpu_list[i].gpu_type) {
@@ -126,4 +167,50 @@ void print_gpu_sensor_values(int idx) {
 			default: continue;
 		}
 	}
+}
+
+void list_tunables(int idx) {
+	// Setup GPUs
+	for (uint8_t i=0; i<gpu_handler_list_len; i++)
+		gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
+
+		
+}
+
+void assign_gpu_tunable(int idx, char *tunable_name, int target_value) {
+	// Setup GPUs
+	for (uint8_t i=0; i<gpu_handler_list_len; i++)
+		gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
+
+	// Check if index is invalid
+	if (gpu_list_len - 1 < idx || idx < 0) {
+	       printf("--set_tunable: invalid index\n");
+	       return;
+	}
+
+	int (*amd_assign_value)(int, int, const char*) = dlsym(libtc_amd, "tc_amd_assign_value");
+	// Check what index in tunable_arg_names tunable_names matches - it's the enum of tunable_type
+	for (int i=0; i<TUNABLE_MEMORY_VOLTAGE + 1; i++) {
+		if (strcmp(tunable_arg_names[i], tunable_name) == 0) {
+			// Found a matching name, call the function
+			int retval = 0;
+			switch (gpu_list[idx].gpu_type) {
+				case AMD:
+					retval = amd_assign_value(i, target_value, gpu_list[idx].hwmon_path);
+					if (retval != 0) {
+						printf("Error: couldn't assign tunable %s to value %d\n", tunable_arg_names[i], target_value);
+		
+					}
+			}
+		}
+	}		
+}
+
+void print_help() {
+	printf("usage: tuxclocker_cli [option]\n");
+	printf("Options:\n");
+	printf("  --list\n");
+	printf("  --list_sensors\n");
+	printf("  --set_tunable <index tunable value>\n");
+	printf("  \tWhere tunable is one of: fanspeed, fanmode, powerlimit, coreclock, memclock, corevoltage, memvoltage\n"); 
 }
