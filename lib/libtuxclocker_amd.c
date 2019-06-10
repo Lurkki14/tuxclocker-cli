@@ -163,6 +163,12 @@ bool contains_digit(const char *string) {
 }
 
 int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name) {
+	// Change directory to hwmon directory
+	if (chdir(hwmon_dir_name) != 0) {
+		// Couldn't open folder
+		return 1;
+	}
+
 	// Go up two directories where pp_od_clk_voltage is located
 	if (chdir("../..") != 0) {
 		// Failure

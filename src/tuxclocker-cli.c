@@ -160,6 +160,7 @@ void print_pstate_info() {
 		if (gpu_list[i].gpu_type == AMD) {
 			amd_pstate_info info;
 			retval = amd_get_pstate_info(&info, gpu_list[i].hwmon_path);
+			printf("%d\n", retval);
 			if (retval != 0)
 				continue;
 
