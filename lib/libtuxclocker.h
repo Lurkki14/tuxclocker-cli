@@ -20,4 +20,21 @@ extern char *tunable_arg_names[16];
 
 enum gpu_type {AMD, NVIDIA};
 
+// Struct for AMD pre-Vega VII pstate info
+typedef struct {
+	// c stands for core, m for memory
+	// Assume no GPU has more than 10 pstates
+	uint32_t m_voltages[10];
+	uint32_t m_clocks[10];
+	uint8_t m_pstate_count;
+
+        uint32_t c_voltages[10];
+        uint32_t c_clocks[10];
+        uint8_t c_pstate_count;
+        
+        uint32_t min_m_clock;
+        uint32_t min_c_clock;
+        uint32_t min_voltage;
+} amd_pstate_info;
+
 #endif

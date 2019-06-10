@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
 			print_gpu_info();
 			break;
 		}
-		if (strcmp(argv[i], "--list-sensors") == 0) {
+		if (strcmp(argv[i], "--list_sensors") == 0) {
 			print_gpu_sensor_values(0);
 			break;
 		}
@@ -78,6 +78,9 @@ int main(int argc, char **argv) {
 				printf("--set_tunable: not enough arguments\n");
 			}				
 			break;
+		}
+		if (strcmp(argv[i], "--list_pstate_info") == 0) {
+			print_pstate_info();
 		}
 	}
 	return 0;
@@ -143,6 +146,38 @@ void print_gpu_info() {
 
 	free(gpu_names);		
 }
+
+void print_pstate_info() {
+	// Setup GPUs
+        for (uint8_t i=0; i<gpu_handler_list_len; i++)
+               gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
+
+ 	// Get pstate info
+	int (*amd_get_pstate_info)(amd_pstate_info*, const char*) = dlsym(libtc_amd, "tc_amd_get_pstate_info");
+    	int retval = 0;
+
+	for (uint8_t i=0; i<gpu_list_len; i++) {
+		if (gpu_list[i].gpu_type == AMD) {
+			amd_pstate_info info;
+			retval = amd_get_pstate_info(&info, gpu_list[i].hwmon_path);
+			if (retval != 0)
+				continue;
+
+			// Print the core pstates
+			printf("Core pstates for GPU %d:\n", i);
+			printf("\t%-4s %-8s %-8s", "Index", "Frequency", "Voltage");
+			for (uint8_t j=0; j<info.c_pstate_count; j++) {
+				printf("\t%-4u %-8u %-8u", j, info.c_clocks[j], info.c_voltages[j]);
+			}
+			// Print memory pstates
+			printf("Memory pstates for GPU %d:\n", i);
+			printf("\t%-4s %-8s %-8s", "Index", "Frequency", "Voltage");
+                        for (uint8_t j=0; j<info.m_pstate_count; j++) {  
+                                printf("\t%-4u %-8u %-8u", j, info.m_clocks[j], info.m_voltages[j]);
+                        }	
+		}
+	}
+}	
 
 void print_gpu_sensor_values(int idx) {
 	// Setup GPUs
@@ -212,5 +247,6 @@ void print_help() {
 	printf("  --list\n");
 	printf("  --list_sensors\n");
 	printf("  --set_tunable <index tunable value>\n");
+	printf("  --list_pstate_info\n");
 	printf("  \tWhere tunable is one of: fanspeed, fanmode, powerlimit, coreclock, memclock, corevoltage, memvoltage\n"); 
 }

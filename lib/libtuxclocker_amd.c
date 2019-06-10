@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <libdrm/amdgpu.h>
 #include <libdrm/amdgpu_drm.h>
 
@@ -150,6 +151,103 @@ int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
 	*gpu_count = amount;
 	return 0;
 }
+
+bool contains_digit(const char *string) {
+	while (*string != '\0') {
+		if (isdigit(*string) != 0) {
+			return true;
+		}
+		*string++;
+	}
+	return false;
+}
+
+int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name) {
+	// Go up two directories where pp_od_clk_voltage is located
+	if (chdir("../..") != 0) {
+		// Failure
+		return 1;
+	}
+	// Open the pp_od_clk_voltage file for reading
+	FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
+	if (pstate_file == NULL) {
+		// Couldn't open file for reading
+		return 1;
+	}
+	parse_file(info, "", pstate_file, -1);
+	return 0;
+}
+
+void pstate_info_from_line(const char *line, amd_pstate_info *info, int section_enum) {
+        // We expect a string of the format <index, clock, voltage>
+        // Get the first space delimited string
+        char *n_line = strdup(line);
+        char *token = strtok(n_line, " ");
+
+        int i = 0;
+        int index = 0;
+        uint32_t clock = 0;
+        uint32_t voltage = 0;
+        while (token != NULL) {
+                // Check the validity of the token
+                if (!contains_digit(token)) {
+                        // The token was unexpected
+                        return;
+                }
+
+                switch (i) {
+                        case 0 : index = atoi(token); break;
+                        case 1 : clock = atoi(token); break;
+                        case 2 : voltage = atoi(token); break;
+                        default : return;
+                }
+                token = strtok(NULL, " ");
+                i++;
+        }
+	// Successfully parsed expected data
+	// Write the values to the correct array
+	switch (section_enum) {
+		case OD_SCLK :
+			info->c_voltages[index] = voltage;
+			info->c_clocks[index] = clock;
+			info->c_pstate_count = index + 1;
+			break;
+		case OD_MCLK :
+			info->m_voltages[index] = voltage;
+			info->m_clocks[index] = clock;
+			info->m_pstate_count = index + 1;
+			break;
+	}
+	free(n_line);
+}	
+
+void parse_file(amd_pstate_info *info, const char *section_string, FILE *pstate_file, int section_enum) {
+	char *buf = NULL;
+	size_t str_len = 0;
+
+	// Get info from this line if it contains any
+	switch (section_enum) {
+		default : break;
+	}
+	
+	while (getline(&buf, &str_len, pstate_file) != -1) {
+		// Check if this is a start of a section
+		for (int i=0; i<sizeof(pstate_sections) / sizeof(char**); i++) {
+			if (strcmp(buf, pstate_sections[i]) == 0) {
+				// New section starts
+				parse_file(info, buf, pstate_file, i);
+			}
+		}
+		// Extract data from this line
+		switch (section_enum) {
+			case OD_SCLK : pstate_info_from_line(buf, info, OD_SCLK);
+				       break;
+			case OD_MCLK : pstate_info_from_line(buf, info, OD_MCLK);
+				       break;
+		 	default : break;
+		}
+	}
+}	
 
 int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_dir_name) {
 	// Change directory to hwmon directory

@@ -37,6 +37,9 @@ void print_help();
 // Print available tunables for by GPU index
 void print_available_tunables(int idx);
 
+// Print pstate info for AMD GPUs
+void print_pstate_info();
+
 // Functions for checking validity of arguments
 bool contains_digit(const char *str);
 bool contains_alpha(const char *str);
