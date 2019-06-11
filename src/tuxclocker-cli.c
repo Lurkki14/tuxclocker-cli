@@ -158,7 +158,7 @@ void print_pstate_info() {
 
 	for (uint8_t i=0; i<gpu_list_len; i++) {
 		if (gpu_list[i].gpu_type == AMD) {
-			amd_pstate_info info;
+			amd_pstate_info info = {0,0,0,0,0,0,0,0,0};
 			retval = amd_get_pstate_info(&info, gpu_list[i].hwmon_path);
 			printf("%d\n", retval);
 			if (retval != 0)
@@ -166,15 +166,15 @@ void print_pstate_info() {
 
 			// Print the core pstates
 			printf("Core pstates for GPU %d:\n", i);
-			printf("\t%-4s %-8s %-8s", "Index", "Frequency", "Voltage");
+			printf("\t%-6s %-12s %-12s", "Index", "Frequency", "Voltage\n");
 			for (uint8_t j=0; j<info.c_pstate_count; j++) {
-				printf("\t%-4u %-8u %-8u", j, info.c_clocks[j], info.c_voltages[j]);
+				printf("\t%-6u %-12u %-12u\n", j, info.c_clocks[j], info.c_voltages[j]);
 			}
 			// Print memory pstates
 			printf("Memory pstates for GPU %d:\n", i);
-			printf("\t%-4s %-8s %-8s", "Index", "Frequency", "Voltage");
+			printf("\t%-6s %-12s %-12s", "Index", "Frequency", "Voltage\n");
                         for (uint8_t j=0; j<info.m_pstate_count; j++) {  
-                                printf("\t%-4u %-8u %-8u", j, info.m_clocks[j], info.m_voltages[j]);
+                                printf("\t%-6u %-12u %-12u\n", j, info.m_clocks[j], info.m_voltages[j]);
                         }	
 		}
 	}

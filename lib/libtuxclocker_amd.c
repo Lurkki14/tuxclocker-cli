@@ -239,7 +239,7 @@ void parse_file(amd_pstate_info *info, const char *section_string, FILE *pstate_
 	while (getline(&buf, &str_len, pstate_file) != -1) {
 		// Check if this is a start of a section
 		for (int i=0; i<sizeof(pstate_sections) / sizeof(char**); i++) {
-			if (strcmp(buf, pstate_sections[i]) == 0) {
+			if (strstr(buf, pstate_sections[i]) != NULL) {
 				// New section starts
 				parse_file(info, buf, pstate_file, i);
 			}
