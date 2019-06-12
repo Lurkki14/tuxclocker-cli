@@ -10,12 +10,6 @@
 #include "amd_functions.h"
 #include "tuxclocker-cli.h"
 
-// Assign extern variables
-char *sensor_names[16] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
-        "Core utilization", "Memory Clock", "Memory Utilization", "Memory Usage"};
-
-char *tunable_arg_names[16] = {"fanspeed", "fanmode", "powerlimit", "coreclock", "memclock", "corevoltage", "memvoltage"};
-
 // Library handles for different GPU vendors
 void *libtc_amd = NULL;
 void *libtc_nvidia = NULL;
@@ -158,24 +152,34 @@ void print_pstate_info() {
 
 	for (uint8_t i=0; i<gpu_list_len; i++) {
 		if (gpu_list[i].gpu_type == AMD) {
-			amd_pstate_info info = {0,0,0,0,0,0,0,0,0};
+			amd_pstate_info info = {0,0,0,0,0,0,0,0,0,0,0,0};
 			retval = amd_get_pstate_info(&info, gpu_list[i].hwmon_path);
-			printf("%d\n", retval);
 			if (retval != 0)
 				continue;
 
 			// Print the core pstates
-			printf("Core pstates for GPU %d:\n", i);
-			printf("\t%-6s %-12s %-12s", "Index", "Frequency", "Voltage\n");
-			for (uint8_t j=0; j<info.c_pstate_count; j++) {
-				printf("\t%-6u %-12u %-12u\n", j, info.c_clocks[j], info.c_voltages[j]);
+			if (info.c_pstate_count > 0) {
+				printf("Core pstates for GPU %u:\n", i);
+				printf("\t%-6s %-18s %-18s", "Index", "Frequency (MHz)", "Voltage (mV)\n");
+				for (uint8_t j=0; j<info.c_pstate_count; j++) {
+					printf("\t%-6u %-18u %-18u\n", j, info.c_clocks[j], info.c_voltages[j]);
+				}
 			}
 			// Print memory pstates
-			printf("Memory pstates for GPU %d:\n", i);
-			printf("\t%-6s %-12s %-12s", "Index", "Frequency", "Voltage\n");
-                        for (uint8_t j=0; j<info.m_pstate_count; j++) {  
-                                printf("\t%-6u %-12u %-12u\n", j, info.m_clocks[j], info.m_voltages[j]);
-                        }	
+			if (info.m_pstate_count > 0) {
+				printf("Memory pstates for GPU %u:\n", i);
+				printf("\t%-6s %-18s %-18s", "Index", "Frequency (MHz)", "Voltage (mV)\n");
+				for (uint8_t j=0; j<info.m_pstate_count; j++) {  
+					printf("\t%-6u %-18u %-18u\n", j, info.m_clocks[j], info.m_voltages[j]);
+				}
+			}
+			// Print limits
+			if (info.min_voltage != 0 && info.max_voltage != 0) {
+				printf("Pstate value limits for GPU %u:\n", i);
+				printf("\tVoltage: %u - %u mV\n", info.min_voltage, info.max_voltage);
+				printf("\tCore clock: %u - %u MHz\n", info.min_c_clock, info.max_c_clock);
+				printf("\tMemory clock: %u - %u MHz\n", info.min_m_clock, info.max_m_clock);
+			}
 		}
 	}
 }	
@@ -197,7 +201,7 @@ void print_gpu_sensor_values(int idx) {
 				for (int j=SENSOR_TEMP; j<SENSOR_MEMORY_MB_USAGE + 1; j++) { 
 					retval = amd_get_sensor_value(gpu_list[i].amd_handle, &reading, j, gpu_list[i].hwmon_path);
 					if (retval == 0)
-						printf("\t%s: %d\n", sensor_names[j], reading);
+						printf("\t%s: %d %s\n", sensor_names[j], reading, sensor_units[j]);
 						//printf("\t%s\n", gpu_list[i].hwmon_path);
 				}
 			default: continue;

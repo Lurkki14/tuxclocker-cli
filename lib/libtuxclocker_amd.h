@@ -13,7 +13,10 @@
 
 // Enums for reading info from AMD pstate file
 enum pstate_section_type {OD_SCLK, OD_MCLK, OD_RANGE};
-const char *pstate_sections[] = {"OD_SCLK", "OD_MCLK", "OD_RANGE"};
+static const char *pstate_sections[] = {"OD_SCLK", "OD_MCLK", "OD_RANGE"};
+
+enum od_range_section_type {MCLK, SCLK, VDDC};
+static const char *od_range_sections[] = {"SCLK", "MCLK", "VDDC"};
 
 int tc_amd_get_gpu_fds(uint8_t *len, int **fds, size_t size);
 // Return 0 on success. fd = file descriptor for GPU, size = size of handle, handle = pointer to write data to
@@ -47,5 +50,7 @@ void parse_file(amd_pstate_info *info, const char *section_string, FILE *pstate_
 
 // Read the pstate index, clock and voltage from line
 void pstate_info_from_line(const char *line, amd_pstate_info *info, int section_enum);
+// Read the limits in OD_RANGE
+void pstate_limit_info_from_line(const char *line, amd_pstate_info *info);
 
 #endif

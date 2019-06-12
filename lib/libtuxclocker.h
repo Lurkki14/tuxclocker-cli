@@ -12,12 +12,14 @@ enum tunable_type {TUNABLE_FAN_SPEED_PERCENTAGE, TUNABLE_FAN_MODE, TUNABLE_POWER
 
 enum tunable_value_type {TUNABLE_ABSOLUTE, TUNABLE_OFFSET};
 
-// Sensor names for displaying
-extern char *sensor_names[16];
+// Sensor names for displaying values
+static const char *sensor_names[] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
+        "Core utilization", "Memory Clock", "Memory Utilization", "Memory Usage"};
+// Units for displaying values
+static const char *sensor_units[] = {"°C", "%", "RPM", "MHz", "mV", "W", "%", "MHz", "%", "MB"};
 
 // Tunable names to be taken in as arguments
-extern char *tunable_arg_names[16];
-
+static const char *tunable_arg_names[] = {"fanspeed", "fanmode", "powerlimit", "coreclock", "memclock", "corevoltage", "memvoltage"};
 enum gpu_type {AMD, NVIDIA};
 
 // Struct for AMD pre-Vega VII pstate info
@@ -35,6 +37,10 @@ typedef struct {
         uint32_t min_m_clock;
         uint32_t min_c_clock;
         uint32_t min_voltage;
+
+	uint32_t max_m_clock;
+	uint32_t max_c_clock;
+	uint32_t max_voltage;
 } amd_pstate_info;
 
 #endif

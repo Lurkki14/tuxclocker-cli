@@ -227,6 +227,65 @@ void pstate_info_from_line(const char *line, amd_pstate_info *info, int section_
 	free(n_line);
 }	
 
+void pstate_limit_info_from_line(const char *line, amd_pstate_info *info) {
+	// Check what range this line contains
+	int range_enum = 0;
+        for (uint8_t i=0; i<sizeof(od_range_sections) / sizeof(char**); i++) {
+                if (strstr(line, od_range_sections[i]) != NULL) {
+                        range_enum = i;
+                        break;
+                }
+        }
+        uint32_t max = 0;
+        uint32_t min = 0;
+        // Get the first token
+        char *n_line = strdup(line);
+        char *token = strtok(n_line, " ");
+
+        int i = 0;
+        while (token != NULL) {
+                // Check the validity of the token
+                if (!contains_digit(token)) {
+                        // Get the next token
+                        token = strtok(NULL, " ");
+                        continue;
+                }
+                // The first valid token is the minimum value
+                switch (i) {
+                        case 0 : min = atoi(token);
+                                 break;
+                        case 1 : max = atoi(token);
+                                 break;
+                        default : break;
+                }
+                // Get the next token
+                token = strtok(NULL, " ");
+                i++;
+        }
+        if (max == 0 && min == 0) {
+                // Couldn't update the values
+                return;
+        }
+        // Write the values to correct member
+        switch (range_enum) {
+                case MCLK :
+                        info->min_m_clock = min;
+                        info->max_m_clock = max;
+                        break;
+                case SCLK :
+                        info->min_c_clock = min;
+                        info->max_c_clock = max;
+                        break;
+                case VDDC :
+                        info->min_voltage = min;
+                        info->max_voltage = max;
+                        break;
+                default :
+                        break;
+        }
+        free(n_line);
+}
+
 void parse_file(amd_pstate_info *info, const char *section_string, FILE *pstate_file, int section_enum) {
 	char *buf = NULL;
 	size_t str_len = 0;
@@ -250,7 +309,9 @@ void parse_file(amd_pstate_info *info, const char *section_string, FILE *pstate_
 				       break;
 			case OD_MCLK : pstate_info_from_line(buf, info, OD_MCLK);
 				       break;
-		 	default : break;
+			case OD_RANGE : pstate_limit_info_from_line(buf, info);
+					break;
+			default : break;
 		}
 	}
 }	
