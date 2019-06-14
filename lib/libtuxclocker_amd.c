@@ -175,7 +175,8 @@ int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name) {
 		return 1;
 	}
 	// Open the pp_od_clk_voltage file for reading
-	FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
+	//FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
+	FILE *pstate_file = fopen("/home/jussi/Documents/fakepstates", "r");
 	if (pstate_file == NULL) {
 		// Couldn't open file for reading
 		return 1;
@@ -332,13 +333,33 @@ int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_di
 				snprintf(hwmon_file_name, 64, "power1_cap");
 				break;
 	}
-	// Open the file for writing
-	FILE *hwmon_file = fopen(hwmon_file_name, "r+");
+	// Open the file descriptor for writing
+	/*FILE *hwmon_file = fopen(hwmon_file_name, "r+");
 	if (hwmon_file == NULL)
 		return 1;
 
 	// Write target value to file
-	fprintf(hwmon_file, "%d", target_value);
+	retval = fprintf(hwmon_file, "%d", target_value);
+	printf("retval: %d\n", retval);
+	if (retval < 1) {
+		// Couldn't write the value
+		return 1;
+	}*/
+	int fd = open(hwmon_file_name, O_WRONLY);
+	if (fd < 1) {
+		// Couldn't get file descriptor for writing
+		return 1;
+	}
+	// Write the value to a buffer
+	char val_buf[16];
+	snprintf(val_buf, 16, "%d", target_value);
+
+	// Write the value to the file
+	retval = write(fd, val_buf, strlen(val_buf));
+	if (retval < 1) {
+		// Couldn't write the value
+		return 1;
+	}
 	return 0;
 }
 
