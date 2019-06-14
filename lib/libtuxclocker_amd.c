@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <math.h>
 #include <libdrm/amdgpu.h>
 #include <libdrm/amdgpu_drm.h>
 
@@ -175,8 +176,8 @@ int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name) {
 		return 1;
 	}
 	// Open the pp_od_clk_voltage file for reading
-	//FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
-	FILE *pstate_file = fopen("/home/jussi/Documents/fakepstates", "r");
+	FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
+	//FILE *pstate_file = fopen("/home/jussi/Documents/fakepstates", "r");
 	if (pstate_file == NULL) {
 		// Couldn't open file for reading
 		return 1;
@@ -328,23 +329,16 @@ int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_di
 	switch (tunable_enum) {
 		case TUNABLE_FAN_SPEED_PERCENTAGE:
 				snprintf(hwmon_file_name, 64, "pwm1");
+				// Multiply the percentage by 2.55 to get the pwm value
+				target_value = (int) round(target_value * 2.55);
 				break;
 		case TUNABLE_POWER_LIMIT:
 				snprintf(hwmon_file_name, 64, "power1_cap");
+				// Multiply by million to get the power limit in microwatts
+				target_value = (int) round(target_value * 1000000);
 				break;
 	}
 	// Open the file descriptor for writing
-	/*FILE *hwmon_file = fopen(hwmon_file_name, "r+");
-	if (hwmon_file == NULL)
-		return 1;
-
-	// Write target value to file
-	retval = fprintf(hwmon_file, "%d", target_value);
-	printf("retval: %d\n", retval);
-	if (retval < 1) {
-		// Couldn't write the value
-		return 1;
-	}*/
 	int fd = open(hwmon_file_name, O_WRONLY);
 	if (fd < 1) {
 		// Couldn't get file descriptor for writing
