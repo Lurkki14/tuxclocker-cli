@@ -10,7 +10,11 @@ enum sensor_type {SENSOR_TEMP, SENSOR_FAN_PERCENTAGE, SENSOR_FAN_RPM, SENSOR_COR
 enum tunable_type {TUNABLE_FAN_SPEED_PERCENTAGE, TUNABLE_FAN_MODE, TUNABLE_POWER_LIMIT, TUNABLE_CORE_CLOCK, TUNABLE_MEMORY_CLOCK,
 	TUNABLE_CORE_VOLTAGE, TUNABLE_MEMORY_VOLTAGE};
 
+static const char *tunable_names[] = {"Fan Speed", "Fan Mode", "Power Limit", "Memory Clock", "Core Voltage", "Memory Voltage"};
+
+// Enum for seeing the value type
 enum tunable_value_type {TUNABLE_ABSOLUTE, TUNABLE_OFFSET};
+static const char *tunable_value_type_names[] = {"Absolute", "Offset"};
 
 // Sensor names for displaying values
 static const char *sensor_names[] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
@@ -21,6 +25,14 @@ static const char *sensor_units[] = {"°C", "%", "RPM", "MHz", "mV", "W", "%", "
 // Tunable names to be taken in as arguments
 static const char *tunable_arg_names[] = {"fanspeed", "fanmode", "powerlimit", "coreclock", "memclock", "corevoltage", "memvoltage"};
 enum gpu_type {AMD, NVIDIA};
+
+// Used for getting the limits for a tunable
+typedef struct {
+	uint32_t min;
+	uint32_t max;
+
+	int tunable_value_type;
+} tunable_valid_range;
 
 // Struct for AMD pre-Vega VII pstate info
 typedef struct {

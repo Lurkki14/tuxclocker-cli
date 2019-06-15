@@ -14,59 +14,6 @@
 #include "libtuxclocker_amd.h"
 #include "libtuxclocker.h"
 
-int tc_amd_get_gpu_fds(uint8_t *len, int **fds, size_t size) {
-	const char *dev_dir_name = "/dev/dri";
-	// Try to initialize all renderD* devices in /dev/dri
-	DIR *dev_dir;
-	struct dirent *dev_entry;
-	char dev_abs_path[128];
-	int *fd_arr = NULL;
-
-	// Open the directory
-	dev_dir = opendir(dev_dir_name);
-	if (dev_dir == NULL)
-		// Couldn't open the directory
-		return 1;		
-
-	// Try to open the files containing renderD
-	int fd = 0;
-	uint8_t amount = 0;
-	uint32_t major, minor;
-	while ((dev_entry = readdir(dev_dir)) != NULL) {
-		if (strstr(dev_entry->d_name, "renderD") != NULL) {
-			sprintf(dev_abs_path, "%s/%s", dev_dir_name, dev_entry->d_name);
-
-			fd = open(dev_abs_path, O_RDONLY);
-			if (fd < 1)
-				continue;
-			// Create a device handle and try to initialize 
-			amdgpu_device_handle dev_handle;
-			if (amdgpu_device_initialize(fd, &major, &minor, &dev_handle) == 0) {
-				// Success
-				amount++;
-				fd_arr = realloc(fd_arr, sizeof(uint8_t) * amount);
-				fd_arr[amount - 1] = fd;
-			}
-		}
-	}
-	closedir(dev_dir);	
-
-	// Return 1 if the array is too small
-	if (amount > size) {
-		free(fd_arr);
-		return 1;
-	}
-	// Write the results into array and free memory
-	for (uint8_t i=0; i<amount; i++)
-		(*fds)[i] = fd_arr[i];
-	
-	free(fd_arr);
-	*len = amount;
-	return 0;
-}
-
-
-
 int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle) {
 	if (sizeof(amdgpu_device_handle) > size)
 		// Pointer not big enough
@@ -357,91 +304,50 @@ int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_di
 	return 0;
 }
 
-int tc_amd_get_hwmon_paths(char ***hwmon_paths, size_t arr_len, size_t str_len) {
-	const char *dev_dir_name = "/dev/dri";
-	DIR *dev_dir;
-	struct dirent *dev_entry;
-	char dev_abs_path[128];
-	char **dev_file_names = NULL;
+int tc_amd_get_tunable_range(int tunable_enum, const char *hwmon_dir_name, tunable_valid_range *range) {
+        switch (tunable_enum) {
+		case TUNABLE_POWER_LIMIT : goto power_limit_from_files;
+					   break;
+		default : return 1;
+	}
+	
+power_limit_from_files: ;
 
-        // Open the directory
-        dev_dir = opendir(dev_dir_name);
-        if (dev_dir == NULL)
-                // Couldn't open the directory
+	// Change directory to hwmon directory
+        int retval = chdir(hwmon_dir_name);
+        if (retval != 0) {
                 return 1;
-
-        // Try to open the files containing renderD
-        int fd = 0;
-	uint8_t amount = 0;
-        uint32_t major, minor;
-
-	while ((dev_entry = readdir(dev_dir)) != NULL) {
-		if (strstr(dev_entry->d_name, "renderD") != NULL) {
-			snprintf(dev_abs_path, 128, "%s/%s", dev_dir_name, dev_entry->d_name);
-			
-			fd = open(dev_abs_path, O_RDONLY);
-			if (fd < 0)
-				continue;
-			
-			amdgpu_device_handle dev_handle;
-			if (amdgpu_device_initialize(fd, &major, &minor, &dev_handle) == 0) {
-				// Success
-				amount++;
-				// Add the name of the renderD file to the list
-				dev_file_names = realloc(dev_file_names, amount);
-				dev_file_names[amount - 1] = malloc(sizeof(char*) * 64);
-				snprintf(dev_file_names[amount - 1], 64, "%s", dev_entry->d_name);
-			}
-		}
 	}
-	closedir(dev_dir);
-	
-	if (amount > arr_len)
-		// Not enough space to copy all paths
+	int min = 0, max = 0;
+	// Open the power1_cap_min file
+	char buf[32];
+	FILE *pcap_min_file = fopen("power1_cap_min", "r");
+	if (pcap_min_file == NULL) {
+		// Couldn't open file
 		return 1;
-
-	// Find the correct directory in /sys/class/drm/renderD(n)/device/hwmon
-	const char *drm_dir = "/sys/class/drm";
-	char **paths = malloc(sizeof(char*) * amount);
-	char buf[128];
-
-	DIR *hwmon_dir;
-	struct dirent *hwmon_entry;
-	size_t longest_path_len = 0;
-	for (uint8_t i=0; i<amount; i++) {
-		// Open the hwmon directory
-		snprintf(buf, 128, "%s/%s/device/hwmon", drm_dir, dev_file_names[i]);
-		hwmon_dir = opendir(buf);
-		if (hwmon_dir == NULL)
-			// Couldn't open the directory
-			return 1;
-		
-		// Find the entry that contains hwmon
-		while ((hwmon_entry = readdir(hwmon_dir)) != NULL) {
-			if (strstr(hwmon_entry->d_name, "hwmon") != NULL) {
-				// Write the path to paths
-				size_t path_len = strlen(buf) + strlen(hwmon_entry->d_name) + 1;
-				if (path_len > longest_path_len)
-					longest_path_len = path_len;
-
-				paths[i] = malloc(path_len);
-				snprintf(paths[i], path_len, "%s/%s", buf, hwmon_entry->d_name);
-				break;
-			}
-		}
 	}
-	// Write the paths to return array
-	if (longest_path_len > str_len)
-		// Not enough space to write the paths
+	fscanf(pcap_min_file, "%s", buf);
+	fclose(pcap_min_file);
+	// Check if buffer contains a digit
+	if (!contains_digit(buf)) {
 		return 1;
-	
-	for (uint8_t i=0; i<amount; i++) {
-		snprintf(*hwmon_paths[i], longest_path_len, "%s", paths[i]);
-		free(paths[i]);
-		free(dev_file_names[i]);
 	}
-	free(dev_file_names);
-	free(paths);	
+	min = atoi(buf);
+
+	// Open the power1_cap_max file
+	FILE *pcap_max_file = fopen("power1_cap_max", "r");
+	if (pcap_max_file == NULL) {
+		return 1;
+	}
+	fscanf(pcap_max_file, "%s", buf);
+	fclose(pcap_max_file);
+	if (!contains_digit(buf)) {
+		return 1;
+	}
+	max = atoi(buf);
+	range->min = min;
+	range->max - max;
+	range->tunable_value_type = TUNABLE_ABSOLUTE;
 	return 0;
 }	
 

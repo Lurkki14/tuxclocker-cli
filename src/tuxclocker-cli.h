@@ -34,11 +34,14 @@ void assign_gpu_tunable(int idx, char *tunable_name, int target_value);
 // Print help
 void print_help();
 
-// Print available tunables for by GPU index
+// Print available tunables and their range for by GPU index
 void print_available_tunables(int idx);
 
 // Print pstate info for AMD GPUs
 void print_pstate_info();
+
+// List available tunables and their range
+void list_tunables(int idx);
 
 // Functions for checking validity of arguments
 bool contains_digit(const char *str);

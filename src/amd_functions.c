@@ -27,64 +27,33 @@ int amd_setup_gpus(void *lib_handle, gpu **gpu_list, uint8_t *gpu_list_len) {
 		gpu_list[*gpu_list_len + i]->amd_handle = handle;
 		gpu_list[*gpu_list_len + i]->gpu_type = AMD;
 	}
-
-	/*
-	int (*amd_get_gpu_fds)(uint8_t*, int**, size_t) = dlsym(lib_handle, "tc_amd_get_gpu_fds");
-	int *fds = malloc(sizeof(int) * MAX_GPUS - *gpu_list_len);
-
-	uint8_t amd_gpu_amount = 0;
-	int retval = amd_get_gpu_fds(&amd_gpu_amount, &fds, MAX_GPUS - *gpu_list_len);
-	if (retval != 0) {
-		free(fds);
-		return 1;
-	}	
-
-	// Get the handles
-	int (*amd_get_handle_by_fd)(int, size_t, void*) = dlsym(lib_handle, "tc_amd_get_gpu_handle_by_fd");
-	uint8_t valid_gpus_len = 0;
-	for (uint8_t i=0; i<amd_gpu_amount; i++) {		
-	        void *handle = malloc(MAX_STRUCT_SIZE);	       
-		retval = amd_get_handle_by_fd(fds[i], MAX_STRUCT_SIZE - *gpu_list_len - valid_gpus_len, handle); 
-		if (retval != 0)
-			continue;
-				
-		valid_gpus_len++;
-		gpu_list[*gpu_list_len + valid_gpus_len - 1] = malloc(sizeof(gpu));
-		gpu_list[*gpu_list_len + valid_gpus_len - 1]->amd_handle = handle;
-	       	gpu_list[*gpu_list_len + valid_gpus_len - 1]->fd = fds[i];
-		gpu_list[*gpu_list_len + valid_gpus_len - 1]->gpu_type = AMD;	
-	}
-	*/
-	/*
-	// Allocate memory for sysfs paths	 
-	char **paths = malloc(sizeof(char*) * valid_gpus_len);
-	for (uint8_t i=0; i<valid_gpus_len; i++) { 
-		gpu_list[*gpu_list_len + i]->hwmon_path = malloc(sizeof(char) * MAX_STRLEN); 
-		paths[i] = malloc(sizeof(char) * MAX_STRLEN);
-	}
-		
-	// Get the sysfs paths	
-	int (*amd_get_hwmon_paths)(char***, size_t, size_t) = dlsym(lib_handle, "tc_amd_get_hwmon_paths");
-	retval = amd_get_hwmon_paths(&paths, valid_gpus_len, MAX_STRLEN);
-	if (retval != 0) {
-		// Failed due to conflicting GPU amounts
-		// Free memory		
-		for (uint8_t i=0; i<valid_gpus_len; i++)
-			free(paths[i]);
-		
-		free(fds);
-		free(paths);
-		return 1;
-	}
-	// Copy the hwmon paths to the gpu struct
-	for (uint8_t i=0; i<valid_gpus_len; i++) {
-		snprintf(gpu_list[*gpu_list_len + i]->hwmon_path, MAX_STRLEN, "%s", paths[i]);
-		// Free memory
-		free(paths[i]);
-	}
-	free(paths);	
-	*/
-	//free(fds);
 	*gpu_list_len += amd_gpu_count;
 	return 0;
+}
+
+int amd_get_tunable_range(tunable_valid_range *range, int tunable_enum,
+		const char *hwmon_path_name, void *lib_handle, void *gpu_handle) {
+	switch (tunable_enum) {
+		case TUNABLE_FAN_SPEED_PERCENTAGE: ;
+			// Get the fan speed - if it can be read it can be changed
+			int (*get_fan_speed)(void*, int*, int, const char*) = dlsym(lib_handle, "tc_amd_get_gpu_sensor_value");
+			int reading;
+			if (get_fan_speed(gpu_handle, &reading, tunable_enum, hwmon_path_name) == 0) {
+				// Success
+				range->min = 0;
+				range->max = 100;
+				range->tunable_value_type = TUNABLE_ABSOLUTE;
+				return 0;
+			}
+			return 1;
+		case TUNABLE_POWER_LIMIT: ;
+			int (*get_power_limit_range)(int, const char*, tunable_valid_range*) = dlsym(lib_handle, "tc_amd_get_tunable_range");
+			if (get_power_limit_range(tunable_enum, hwmon_path_name, range) == 0) {
+				// Success
+				return 0;
+			}
+			return 1;
+		default: return 1;
+	}
+	return 1;
 }

@@ -18,7 +18,6 @@ static const char *pstate_sections[] = {"OD_SCLK", "OD_MCLK", "OD_RANGE"};
 enum od_range_section_type {MCLK, SCLK, VDDC};
 static const char *od_range_sections[] = {"SCLK", "MCLK", "VDDC"};
 
-int tc_amd_get_gpu_fds(uint8_t *len, int **fds, size_t size);
 // Return 0 on success. fd = file descriptor for GPU, size = size of handle, handle = pointer to write data to
 int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle);
 
@@ -30,9 +29,6 @@ int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, con
 // Return 0 on success. Pass the buffer for the string to be copied to and its size
 int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]);
 
-// Return 0 on success. Pass the pointer for the paths to be copied to and its size and max size for each string
-int tc_amd_get_hwmon_paths(char ***hwmon_paths, size_t arr_len, size_t str_len);
-
 // Get file descriptors and hwmon paths for all AMD GPUs. Remember to free the memory
 int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count);
 
@@ -41,6 +37,9 @@ int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_di
 
 // Save pstate info into return pointer. Return 0 on success.
 int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name);
+
+// Get the valid value range for a tunable. Currently only used for power limit.
+int tc_amd_get_tunable_range(int tunable_enum, const char *hwmon_dir_name, tunable_valid_range *range);
 
 // Internal functions
 // Return true if string contains a digit

@@ -76,6 +76,9 @@ int main(int argc, char **argv) {
 		if (strcmp(argv[i], "--list_pstate_info") == 0) {
 			print_pstate_info();
 		}
+		if (strcmp(argv[i], "--list_tunables") == 0) {
+			list_tunables(0);
+		}
 	}
 	return 0;
 }
@@ -211,10 +214,25 @@ void print_gpu_sensor_values(int idx) {
 
 void list_tunables(int idx) {
 	// Setup GPUs
-	for (uint8_t i=0; i<gpu_handler_list_len; i++)
+	for (uint8_t i=0; i<gpu_handler_list_len; i++) {
 		gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
-
-		
+	}
+	int retval = 0;
+	for (uint8_t i=0; i<gpu_list_len; i++) {
+		switch (gpu_list[i].gpu_type) {
+			case AMD: ; 
+				// Check what tunables we get a range successfully for
+				tunable_valid_range range;
+				for (int j=TUNABLE_FAN_SPEED_PERCENTAGE; j<TUNABLE_MEMORY_VOLTAGE + 1; j++) {
+					retval = amd_get_tunable_range(&range, j, gpu_list[i].hwmon_path,
+							gpu_handler_list[i].lib_handle, gpu_list[i].amd_handle);
+					if (retval == 0) {
+						printf("%s: range %u - %u, Value type: %s\n", tunable_names[j], range.min, range.max, tunable_value_type_names[range.tunable_value_type]);
+					}
+				}
+			default: continue;
+		}
+	}	
 }
 
 void assign_gpu_tunable(int idx, char *tunable_name, int target_value) {
@@ -247,11 +265,14 @@ void assign_gpu_tunable(int idx, char *tunable_name, int target_value) {
 }
 
 void print_help() {
-	printf("usage: tuxclocker_cli [option]\n");
-	printf("Options:\n");
-	printf("  --list\n");
-	printf("  --list_sensors\n");
-	printf("  --set_tunable <index tunable value>\n");
-	printf("  --list_pstate_info\n");
-	printf("  \tWhere tunable is one of: fanspeed, fanmode, powerlimit, coreclock, memclock, corevoltage, memvoltage\n"); 
+	static const char *help_message = "usage: tuxclocker_cli [option]\n"
+					"Options:\n"
+					"  --list\n"
+					"  --list_sensors\n"
+					"  --list_tunables\n"
+					"  --set_tunable <index tunable value>\n"
+					"  \tWhere tunable is one of: fanspeed, fanmode, powerlimit, coreclock, memclock, corevoltage, memvoltage\n"
+					"  --list_pstate_info\n";
+
+	printf(help_message);
 }
