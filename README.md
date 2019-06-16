@@ -4,6 +4,7 @@
 git clone https://github.com/Lurkki14/tuxclocker-cli
 cd tuxclocker-cli
 meson build --prefix=/usr
+cd build
 ninja
 ninja install
 ```
