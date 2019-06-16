@@ -14,6 +14,6 @@ This is assuming your prefix is `/usr`, consult your distribution's documentatio
 # Running
 
 ```
-tuxclocker_cli <option>
+tuxclocker-cli <option>
 ```
 Run with --help for help.
