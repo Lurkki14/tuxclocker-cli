@@ -19,7 +19,8 @@ int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle) {
 		// Pointer not big enough
 		return 1;
 
-	if (amdgpu_device_initialize(fd, NULL, NULL, (amdgpu_device_handle*) handle) == 0)
+	uint32_t minor, major;
+	if (amdgpu_device_initialize(fd, &minor, &major, (amdgpu_device_handle*) handle) == 0)
 		// Success
 		return 0;
 	
@@ -54,7 +55,8 @@ int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
 				continue;
 			// Create a device handle and try to initialize 
 			amdgpu_device_handle dev_handle;
-			if (amdgpu_device_initialize(fd, NULL, NULL, &dev_handle) == 0) {
+			uint32_t minor, major;
+			if (amdgpu_device_initialize(fd, &minor, &major, &dev_handle) == 0) {
 				// Success
 				// Find the hwmon folder for the renderD device
 				char hwmon_dir_name[128];
