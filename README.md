@@ -1,5 +1,17 @@
 # Installation
 
+Build options for meson:
+```
+-Dwith_amd=true
+```
+
+Build the AMD library.
+
+Example:
+```
+meson build --prefix=/usr -Dwith_amd=true
+```
+
 ```
 git clone https://github.com/Lurkki14/tuxclocker-cli
 cd tuxclocker-cli
