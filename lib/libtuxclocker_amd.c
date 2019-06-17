@@ -19,8 +19,7 @@ int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle) {
 		// Pointer not big enough
 		return 1;
 
-	uint32_t major, minor;
-	if (amdgpu_device_initialize(fd, &major, &minor, (amdgpu_device_handle*) handle) == 0)
+	if (amdgpu_device_initialize(fd, NULL, NULL, (amdgpu_device_handle*) handle) == 0)
 		// Success
 		return 0;
 	
@@ -44,22 +43,23 @@ int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
 	// Try to open the files containing renderD
 	int fd = 0;
 	uint8_t amount = 0;
-	uint32_t major, minor;
 	char **paths = NULL;
 	while ((dev_entry = readdir(dev_dir)) != NULL) {
 		if (strstr(dev_entry->d_name, "renderD") != NULL) {
-			sprintf(dev_abs_path, "%s/%s", dev_dir_name, dev_entry->d_name);
+
+			snprintf(dev_abs_path, 127, "%s/%s", dev_dir_name, dev_entry->d_name);
 
 			fd = open(dev_abs_path, O_RDONLY);
 			if (fd < 1)
 				continue;
 			// Create a device handle and try to initialize 
 			amdgpu_device_handle dev_handle;
-			if (amdgpu_device_initialize(fd, &major, &minor, &dev_handle) == 0) {
+			if (amdgpu_device_initialize(fd, NULL, NULL, &dev_handle) == 0) {
 				// Success
 				// Find the hwmon folder for the renderD device
 				char hwmon_dir_name[128];
-				snprintf(hwmon_dir_name, 128, "/sys/class/drm/%s/device/hwmon", dev_entry->d_name);
+				size_t path_len = strlen("/sys/class/drm/device/hwmon");
+				snprintf(hwmon_dir_name, 128 - path_len, "/sys/class/drm/%s/device/hwmon", dev_entry->d_name);
 
 				DIR *hwmon_dir;
 				struct dirent *hwmon_entry;
@@ -123,8 +123,8 @@ int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name) {
 		return 1;
 	}
 	// Open the pp_od_clk_voltage file for reading
-	FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
-	//FILE *pstate_file = fopen("/home/jussi/Documents/fakepstates", "r");
+	//FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
+	FILE *pstate_file = fopen("/home/jussi/Documents/fakepstates", "r");
 	if (pstate_file == NULL) {
 		// Couldn't open file for reading
 		return 1;
@@ -346,7 +346,7 @@ power_limit_from_files: ;
 	}
 	max = atoi(buf);
 	range->min = min;
-	range->max - max;
+	range->max = max;
 	range->tunable_value_type = TUNABLE_ABSOLUTE;
 	return 0;
 }	
@@ -354,7 +354,6 @@ power_limit_from_files: ;
 int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, const char *hwmon_dir_name) {
 	int sensor_enum = 0;
 	int retval = 0;
-	uint32_t major, minor;
 	switch (sensor_type) {
 		case SENSOR_TEMP : sensor_enum = AMDGPU_INFO_SENSOR_GPU_TEMP; break;
 		case SENSOR_CORE_CLOCK : sensor_enum = AMDGPU_INFO_SENSOR_GFX_SCLK; break;			     
