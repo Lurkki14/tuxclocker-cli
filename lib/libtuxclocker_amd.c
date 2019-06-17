@@ -46,8 +46,8 @@ int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
 	char **paths = NULL;
 	while ((dev_entry = readdir(dev_dir)) != NULL) {
 		if (strstr(dev_entry->d_name, "renderD") != NULL) {
-
-			snprintf(dev_abs_path, 127, "%s/%s", dev_dir_name, dev_entry->d_name);
+			size_t dir_strlen = strlen(dev_dir_name);
+			snprintf(dev_abs_path, 128 - dir_strlen, "%s/%s", dev_dir_name, dev_entry->d_name);
 
 			fd = open(dev_abs_path, O_RDONLY);
 			if (fd < 1)
@@ -75,7 +75,8 @@ int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
 						// Success
 						char hwmon_path[128];
 						amount++;
-						snprintf(hwmon_path, 128, "%s/%s", hwmon_dir_name, hwmon_entry->d_name);
+						size_t hwmon_strlen = strlen(hwmon_dir_name);
+						snprintf(hwmon_path, 128 - hwmon_strlen, "%s/%s", hwmon_dir_name, hwmon_entry->d_name);
 						paths = realloc(paths, sizeof(char*) * amount);
 						paths[amount - 1] = strdup(hwmon_path);
 
@@ -396,7 +397,7 @@ sensor_file:
 	}*/
 	FILE *file = fopen("pwm1", "r");
 	fscanf(file, "%d", reading);
-	*reading = *reading /= 2.55;
+	*reading /= 2.55;
 	return 0;
 }
 
