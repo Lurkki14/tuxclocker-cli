@@ -64,9 +64,9 @@ int main(int argc, char **argv) {
 			// Read arguments of the format [index, type, value]
 			if (i + 3 < argc) {
 				// Check if arguments are valid
-				if (!contains_alpha(argv[i+1]) && !contains_digit(argv[i+2]) && !contains_alpha(argv[i+3])) {
+				if (!contains_alpha(argv[i+1]) && !contains_digit(argv[i+2])) {
 					// Got valid arguments - check the validity of the type in the function
-					assign_gpu_tunable(atoi(argv[i + 1]), argv[i + 2], atoi(argv[i + 3]));
+					assign_gpu_tunable(atoi(argv[i + 1]), argv[i + 2], argv[i + 3]);
 				}
 			} else {
 				printf("--set_tunable: not enough arguments\n");
@@ -236,7 +236,7 @@ void list_tunables(int idx) {
 	}	
 }
 
-void assign_gpu_tunable(int idx, char *tunable_name, int target_value) {
+void assign_gpu_tunable(int idx, char *tunable_name, char *target_value) {
 	// Setup GPUs
 	for (uint8_t i=0; i<gpu_handler_list_len; i++)
 		gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
@@ -255,14 +255,34 @@ void assign_gpu_tunable(int idx, char *tunable_name, int target_value) {
 			int retval = 0;
 			switch (gpu_list[idx].gpu_type) {
 				case AMD:
-					retval = amd_assign_value(i, target_value, gpu_list[idx].hwmon_path);
-					if (retval != 0) {
-						printf("Error: couldn't assign tunable %s to value %d\n", tunable_arg_names[i], target_value);
-		
+					// Fan mode is assigned by text
+					switch (i) {
+						case TUNABLE_FAN_MODE:
+							// Check what enum target_value matches
+							for (int j=0; j<sizeof(fan_mode_arg_names) / sizeof(char**); j++) {
+									if (strcmp(fan_mode_arg_names[j], target_value) == 0) {
+										retval = amd_assign_value(i, j, gpu_list[idx].hwmon_path);
+										if (retval != 0) {
+											printf("Error: couldn't assign tunable %s to value %s\n", tunable_arg_names[i], target_value);
+										}
+										return;
+									}
+							}
+							printf("Error: no such fanmode as %s\n", target_value);
+						default:
+							retval = amd_assign_value(i, atoi(target_value), gpu_list[idx].hwmon_path);
+							if (retval != 0) {
+								printf("Error: couldn't assign tunable %s to value %d\n", tunable_arg_names[i], atoi(target_value));
+							}
+							return;
 					}
+				default:
+					continue;
 			}
 		}
-	}		
+	}
+	// tunable_name didn't match anything in tunable_arg_names
+	printf("Error: no such tunable as %s\n", tunable_name);
 }
 
 void print_help() {
@@ -273,7 +293,8 @@ void print_help() {
 					"  --list_tunables\n"
 					"  --set_tunable <index tunable value>\n"
 					"  \tWhere tunable is one of: fanspeed, fanmode, powerlimit, coreclock, memclock, corevoltage, memvoltage\n"
+					"  \tValues for fanmode: auto, manual\n"
 					"  --list_pstate_info\n";
 
-	printf(help_message);
+	printf("%s", help_message);
 }

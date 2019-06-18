@@ -29,7 +29,7 @@ void print_gpu_info();
 void print_gpu_sensor_values(int idx);
 
 // Assign a value for a tunable by GPU index
-void assign_gpu_tunable(int idx, char *tunable_name, int target_value);
+void assign_gpu_tunable(int idx, char *tunable_name, char *target_value);
 
 // Print help
 void print_help();

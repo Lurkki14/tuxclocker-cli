@@ -17,6 +17,10 @@ static const char *tunable_units[] = {"%", "", "W", "MHz", "MHz", "mV", "mV"};
 enum tunable_value_type {TUNABLE_ABSOLUTE, TUNABLE_OFFSET};
 static const char *tunable_value_type_names[] = {"Absolute", "Offset"};
 
+// Enum for fan modes
+enum fan_mode {FAN_MODE_AUTO, FAN_MODE_MANUAL};
+static const char *fan_mode_arg_names[] = {"auto", "manual"};
+
 // Sensor names for displaying values
 static const char *sensor_names[] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
         "Core utilization", "Memory Clock", "Memory Utilization", "Memory Usage"};

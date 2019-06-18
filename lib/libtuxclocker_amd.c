@@ -283,15 +283,28 @@ int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_di
 	// Get the file name to write to
 	switch (tunable_enum) {
 		case TUNABLE_FAN_SPEED_PERCENTAGE:
-				snprintf(hwmon_file_name, 64, "pwm1");
-				// Multiply the percentage by 2.55 to get the pwm value
-				target_value = (int) round(target_value * 2.55);
-				break;
+			snprintf(hwmon_file_name, 64, "pwm1");
+			// Multiply the percentage by 2.55 to get the pwm value
+			target_value = (int) round(target_value * 2.55);
+			break;
 		case TUNABLE_POWER_LIMIT:
-				snprintf(hwmon_file_name, 64, "power1_cap");
-				// Multiply by million to get the power limit in microwatts
-				target_value = (int) round(target_value * 1000000);
-				break;
+			snprintf(hwmon_file_name, 64, "power1_cap");
+			// Multiply by million to get the power limit in microwatts
+			target_value = (int) round(target_value * 1000000);
+			break;
+		case TUNABLE_FAN_MODE:
+			snprintf(hwmon_file_name, 64, "pwm1_enable");
+			switch (target_value) {
+				case FAN_MODE_AUTO:
+					target_value = 0;
+					break;
+				case FAN_MODE_MANUAL:
+					target_value = 1;
+					break;
+				default:
+					break;
+			}
+			break;
 	}
 	// Open the file descriptor for writing
 	int fd = open(hwmon_file_name, O_WRONLY);
