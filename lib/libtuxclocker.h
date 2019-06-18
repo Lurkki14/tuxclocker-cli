@@ -10,7 +10,8 @@ enum sensor_type {SENSOR_TEMP, SENSOR_FAN_PERCENTAGE, SENSOR_FAN_RPM, SENSOR_COR
 enum tunable_type {TUNABLE_FAN_SPEED_PERCENTAGE, TUNABLE_FAN_MODE, TUNABLE_POWER_LIMIT, TUNABLE_CORE_CLOCK, TUNABLE_MEMORY_CLOCK,
 	TUNABLE_CORE_VOLTAGE, TUNABLE_MEMORY_VOLTAGE};
 
-static const char *tunable_names[] = {"Fan Speed", "Fan Mode", "Power Limit", "Memory Clock", "Core Voltage", "Memory Voltage"};
+static const char *tunable_names[] = {"Fan Speed", "Fan Mode", "Power Limit", "Core Clock", "Memory Clock", "Core Voltage", "Memory Voltage"};
+static const char *tunable_units[] = {"%", "", "W", "MHz", "MHz", "mV", "mV"};
 
 // Enum for seeing the value type
 enum tunable_value_type {TUNABLE_ABSOLUTE, TUNABLE_OFFSET};

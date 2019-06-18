@@ -126,13 +126,18 @@ int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name) {
 		return 1;
 	}
 	// Open the pp_od_clk_voltage file for reading
-	//FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
-	FILE *pstate_file = fopen("/home/jussi/Documents/fakepstates", "r");
+	FILE *pstate_file = fopen("pp_od_clk_voltage", "r");
+	//FILE *pstate_file = fopen("/home/jussi/Documents/fakepstates", "r");
 	if (pstate_file == NULL) {
 		// Couldn't open file for reading
 		return 1;
 	}
 	parse_file(info, "", pstate_file, -1);
+	// Check if pstate info got updated
+	if (info->m_pstate_count == 0 || info->c_pstate_count == 0) {
+		return 1;
+	}
+
 	return 0;
 }
 

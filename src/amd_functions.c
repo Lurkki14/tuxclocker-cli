@@ -53,6 +53,40 @@ int amd_get_tunable_range(tunable_valid_range *range, int tunable_enum,
 				return 0;
 			}
 			return 1;
+		case TUNABLE_CORE_CLOCK: ; {
+				int (*get_pstate_info)(amd_pstate_info*, const char*) = dlsym(lib_handle, "tc_amd_get_pstate_info");
+				amd_pstate_info info;
+				if (get_pstate_info(&info, hwmon_path_name) == 0) {
+					// Success
+					range->min = info.min_c_clock;
+					range->max = info.max_c_clock;
+					return 0;
+				}
+				return 1;
+			}
+		case TUNABLE_MEMORY_CLOCK: ; {
+				int (*get_pstate_info)(amd_pstate_info*, const char*) = dlsym(lib_handle, "tc_amd_get_pstate_info");
+				amd_pstate_info info;
+				if (get_pstate_info(&info, hwmon_path_name) == 0) {
+					// Success
+					range->min = info.min_m_clock;
+					range->max = info.max_m_clock;
+					return 0;
+				}
+				return 1;	
+			}
+		case TUNABLE_CORE_VOLTAGE: ; {
+				int (*get_pstate_info)(amd_pstate_info*, const char*) = dlsym(lib_handle, "tc_amd_get_pstate_info");
+				amd_pstate_info info;
+				int retval = get_pstate_info(&info, hwmon_path_name);
+				if (retval == 0) {
+					// Success
+					range->min = info.min_voltage;
+					range->max = info.max_voltage;
+					return retval;
+				}
+				return retval;
+			}
 		default: return 1;
 	}
 	return 1;

@@ -219,6 +219,7 @@ void list_tunables(int idx) {
 	}
 	int retval = 0;
 	for (uint8_t i=0; i<gpu_list_len; i++) {
+		printf("Available tunables for GPU %u:\n", i);
 		switch (gpu_list[i].gpu_type) {
 			case AMD: ; 
 				// Check what tunables we get a range successfully for
@@ -227,7 +228,7 @@ void list_tunables(int idx) {
 					retval = amd_get_tunable_range(&range, j, gpu_list[i].hwmon_path,
 							gpu_handler_list[i].lib_handle, gpu_list[i].amd_handle);
 					if (retval == 0) {
-						printf("%s: range %u - %u, Value type: %s\n", tunable_names[j], range.min, range.max, tunable_value_type_names[range.tunable_value_type]);
+						printf("\t%s: range %u - %u %s, Value type: %s\n", tunable_names[j], range.min, range.max, tunable_units[j], tunable_value_type_names[range.tunable_value_type]);
 					}
 				}
 			default: continue;
