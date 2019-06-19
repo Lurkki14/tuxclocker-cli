@@ -133,9 +133,9 @@ void print_gpu_info() {
 	}
 
 	// Print the GPU names and indices
-	printf("%-*s %8s\n", longest_name_len, "GPU", "Index");
+	printf("%-*s %8s\n", (int) longest_name_len, "GPU", "Index");
 	for (uint8_t i=0; i<gpu_list_len; i++) {
-		printf("%-*s %8u\n", longest_name_len, gpu_names[i], i);
+		printf("%-*s %8u\n", (int) longest_name_len, gpu_names[i], i);
 	}
 	// Free the memory
 	for (int i=0; i<gpu_list_len; i++)
