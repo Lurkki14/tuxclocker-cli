@@ -418,7 +418,7 @@ sensor_file:
 	}
 
 	// Read the file
-	/*FILE *s_file;
+	/*FILE *s_file = NULL;
 	switch (sensor_enum) {
 		case SENSOR_FAN_PERCENTAGE :
 			s_file = fopen("pwm1", "r");
@@ -430,10 +430,13 @@ sensor_file:
 			*reading = (int) *reading / 2.55;
 			return 0;
 		default : return 1;
-	}*/
+	}
+	*/
+	printf("Reading fanspeed\n");
 	FILE *file = fopen("pwm1", "r");
 	fscanf(file, "%d", reading);
 	*reading /= 2.55;
+	
 	return 0;
 }
 

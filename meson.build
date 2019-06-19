@@ -8,7 +8,9 @@ dl = cc.find_library('dl')
 m = cc.find_library('m')
 
 if get_option('with_amd')
-drm_amdgpu = cc.find_library('drm_amdgpu')
-subdir('lib')
+  drm_amdgpu = cc.find_library('drm_amdgpu')
+  amdgpu_h = cc.has_header('libdrm/amdgpu.h')
+  amdgpu_drm_h = cc.has_header('libdrm/amdgpu_drm.h')
+  subdir('lib')
 endif
 subdir('src')

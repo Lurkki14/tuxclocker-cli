@@ -5,10 +5,13 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #include "../lib/libtuxclocker.h"
 #include "amd_functions.h"
 #include "tuxclocker-cli.h"
+
+extern int errno;
 
 // Library handles for different GPU vendors
 void *libtc_amd = NULL;
@@ -263,7 +266,7 @@ void assign_gpu_tunable(int idx, char *tunable_name, char *target_value) {
 									if (strcmp(fan_mode_arg_names[j], target_value) == 0) {
 										retval = amd_assign_value(i, j, gpu_list[idx].hwmon_path, gpu_list[idx].amd_handle);
 										if (retval != 0) {
-											printf("Error: couldn't assign tunable %s to value %s\n", tunable_arg_names[i], target_value);
+											printf("Error: couldn't assign tunable %s to value %s: %s\n", tunable_arg_names[i], target_value, strerror(errno));
 										}
 										return;
 									}
@@ -272,7 +275,7 @@ void assign_gpu_tunable(int idx, char *tunable_name, char *target_value) {
 						default:
 							retval = amd_assign_value(i, atoi(target_value), gpu_list[idx].hwmon_path, gpu_list[idx].amd_handle);
 							if (retval != 0) {
-								printf("Error: couldn't assign tunable %s to value %d\n", tunable_arg_names[i], atoi(target_value));
+								printf("Error: couldn't assign tunable %s to value %d: %s\n", tunable_arg_names[i], atoi(target_value), strerror(errno));
 							}
 							return;
 					}
