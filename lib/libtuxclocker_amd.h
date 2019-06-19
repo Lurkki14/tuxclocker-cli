@@ -33,7 +33,7 @@ int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]);
 int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count);
 
 // Assign a value for a tunable. Return 0 on success. 
-int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_dir_name);
+int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_dir_name, void *handle);
 
 // Save pstate info into return pointer. Return 0 on success.
 int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name);

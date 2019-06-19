@@ -247,7 +247,7 @@ void assign_gpu_tunable(int idx, char *tunable_name, char *target_value) {
 	       return;
 	}
 
-	int (*amd_assign_value)(int, int, const char*) = dlsym(libtc_amd, "tc_amd_assign_value");
+	int (*amd_assign_value)(int, int, const char*, void*) = dlsym(libtc_amd, "tc_amd_assign_value");
 	// Check what index in tunable_arg_names tunable_names matches - it's the enum of tunable_type
 	for (int i=0; i<TUNABLE_MEMORY_VOLTAGE + 1; i++) {
 		if (strcmp(tunable_arg_names[i], tunable_name) == 0) {
@@ -261,7 +261,7 @@ void assign_gpu_tunable(int idx, char *tunable_name, char *target_value) {
 							// Check what enum target_value matches
 							for (int j=0; j<sizeof(fan_mode_arg_names) / sizeof(char**); j++) {
 									if (strcmp(fan_mode_arg_names[j], target_value) == 0) {
-										retval = amd_assign_value(i, j, gpu_list[idx].hwmon_path);
+										retval = amd_assign_value(i, j, gpu_list[idx].hwmon_path, gpu_list[idx].amd_handle);
 										if (retval != 0) {
 											printf("Error: couldn't assign tunable %s to value %s\n", tunable_arg_names[i], target_value);
 										}
@@ -270,7 +270,7 @@ void assign_gpu_tunable(int idx, char *tunable_name, char *target_value) {
 							}
 							printf("Error: no such fanmode as %s\n", target_value);
 						default:
-							retval = amd_assign_value(i, atoi(target_value), gpu_list[idx].hwmon_path);
+							retval = amd_assign_value(i, atoi(target_value), gpu_list[idx].hwmon_path, gpu_list[idx].amd_handle);
 							if (retval != 0) {
 								printf("Error: couldn't assign tunable %s to value %d\n", tunable_arg_names[i], atoi(target_value));
 							}

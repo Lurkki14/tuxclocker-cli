@@ -273,7 +273,7 @@ void parse_file(amd_pstate_info *info, const char *section_string, FILE *pstate_
 	}
 }	
 
-int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_dir_name) {
+int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_dir_name, void *handle) {
 	// Change directory to hwmon directory
 	int retval = chdir(hwmon_dir_name);
 	if (retval != 0)
@@ -295,8 +295,19 @@ int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_di
 		case TUNABLE_FAN_MODE:
 			snprintf(hwmon_file_name, 64, "pwm1_enable");
 			switch (target_value) {
-				case FAN_MODE_AUTO:
-					target_value = 0;
+				case FAN_MODE_AUTO: ;
+					// On GPUs with experimental AMDGPU support (SI & CI) 0 means automatic (I think)
+					// Check the family
+					struct amdgpu_gpu_info info;
+					if (amdgpu_query_gpu_info(*(amdgpu_device_handle*) handle, &info) != 0) {
+						// Failure
+						return 1;
+					}
+					if (info.family_id < AMDGPU_FAMILY_KV) {
+						target_value = 0;
+					} else {
+						target_value = 2;
+					}
 					break;
 				case FAN_MODE_MANUAL:
 					target_value = 1;
@@ -366,8 +377,13 @@ power_limit_from_files: ;
 		return 1;
 	}
 	max = atoi(buf);
-	range->min = min;
-	range->max = max;
+	if (max == 0 && min == 0) {
+		// Couldn't update values
+		return 1;
+	}
+
+	range->min = min / 1000000;
+	range->max = max / 1000000;
 	range->tunable_value_type = TUNABLE_ABSOLUTE;
 	return 0;
 }	
