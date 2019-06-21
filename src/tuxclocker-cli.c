@@ -63,6 +63,18 @@ int main(int argc, char **argv) {
 			print_help();
 			break;
 		}
+		if (strcmp(argv[i], "--set_pstate") == 0) {
+			// Check if arguments are [index, pstate_type, clock, voltage]
+			if (i + 4 < argc) {
+				if (!contains_alpha(argv[i+1]) && !contains_digit(argv[i+2]) && !contains_alpha(argv[i+3]) && !contains_alpha(argv[i+4])) {
+					assign_pstate(atoi(argv[i+1]), argv[i+2], atoi(argv[i+3]), atoi(argv[i+4]));
+					break;
+				}
+			} else {
+				printf("--set_pstate: not enough arguments\n");
+			}
+		}
+
 		if (strcmp(argv[i], "--set_tunable") == 0) {
 			// Read arguments of the format [index, type, value]
 			if (i + 3 < argc) {
@@ -239,6 +251,30 @@ void list_tunables(int idx) {
 	}	
 }
 
+void assign_pstate(int idx, char *pstate_type, int clock, int voltage) {
+	// Setup GPUs               
+        for (uint8_t i=0; i<gpu_handler_list_len; i++) {
+                gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
+	}
+	// Check the pstate_type
+	for (int i=0; i<sizeof(amd_pstate_type_args) / sizeof(char**); i++) {
+		if (strcmp(pstate_type, amd_pstate_type_args[i]) == 0) {
+			// Call the function
+			int (*assign_pstate)(int, uint8_t, uint32_t, uint32_t, const char*) = dlsym(libtc_amd, "tc_amd_assign_pstate");
+			if (assign_pstate == NULL) {
+				fprintf(stderr, "Error: couldn't load library function 'tc_amd_assign_pstate'");
+				return;
+			}
+			int retval = assign_pstate(i, (uint8_t) idx, (uint32_t) clock, (uint32_t) voltage, gpu_list[idx].hwmon_path);
+			if (retval != 0) {
+				fprintf(stderr, "Error: couldn't assign %s pstate: %s\n", pstate_type, strerror(errno));
+			}
+			return;
+		}
+	}
+	fprintf(stderr, "Error: no such pstate type as %s\n", pstate_type);
+}
+
 void assign_gpu_tunable(int idx, char *tunable_name, char *target_value) {
 	// Setup GPUs
 	for (uint8_t i=0; i<gpu_handler_list_len; i++)
@@ -289,7 +325,7 @@ void assign_gpu_tunable(int idx, char *tunable_name, char *target_value) {
 }
 
 void print_help() {
-	static const char *help_message = "usage: tuxclocker_cli [option]\n"
+	static const char *help_message = "usage: tuxclocker-cli [option]\n"
 					"Options:\n"
 					"  --list\n"
 					"  --list_sensors\n"
@@ -297,6 +333,8 @@ void print_help() {
 					"  --set_tunable <index tunable value>\n"
 					"  \tWhere tunable is one of: fanspeed, fanmode, powerlimit, coreclock, memclock, corevoltage, memvoltage\n"
 					"  \tValues for fanmode: auto, manual\n"
+					"  --set_pstate <index type clock voltage>\n"
+					"  \tWhere type is one of: core, mem\n"
 					"  --list_pstate_info\n";
 
 	printf("%s", help_message);

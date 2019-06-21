@@ -31,6 +31,10 @@ static const char *sensor_units[] = {"°C", "%", "RPM", "MHz", "mV", "W", "%", "
 static const char *tunable_arg_names[] = {"fanspeed", "fanmode", "powerlimit", "coreclock", "memclock", "corevoltage", "memvoltage"};
 enum gpu_type {AMD, NVIDIA};
 
+// Pstate types for pre-Vega VII GPUs
+enum amd_pstate_type {PSTATE_CORE, PSTATE_MEMORY};
+static const char *amd_pstate_type_args[] = {"core", "mem"};
+
 // Used for getting the limits for a tunable
 typedef struct {
 	uint32_t min;

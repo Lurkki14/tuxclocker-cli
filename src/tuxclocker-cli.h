@@ -43,6 +43,8 @@ void print_pstate_info();
 // List available tunables and their range
 void list_tunables(int idx);
 
+void assign_pstate(int idx, char *pstate_type, int clock, int voltage);
+
 // Functions for checking validity of arguments
 bool contains_digit(const char *str);
 bool contains_alpha(const char *str);

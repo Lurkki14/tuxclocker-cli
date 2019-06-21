@@ -41,6 +41,9 @@ int tc_amd_get_pstate_info(amd_pstate_info *info, const char *hwmon_dir_name);
 // Get the valid value range for a tunable. Currently only used for power limit.
 int tc_amd_get_tunable_range(int tunable_enum, const char *hwmon_dir_name, tunable_valid_range *range);
 
+// Assign a pstate
+int tc_amd_assign_pstate(int pstate_type, uint8_t index, uint32_t clock, uint32_t voltage, const char *hwmon_dir_name); 
+
 // Internal functions
 // Return true if string contains a digit
 bool contains_digit(const char *string);

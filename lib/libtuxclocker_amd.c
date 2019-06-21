@@ -333,6 +333,58 @@ int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_di
 		// Couldn't write the value
 		return 1;
 	}
+	// Apply by writing 'c'
+	retval = write(fd, "c", strlen("c"));
+	if (retval < 1) {
+		return 1;
+	}
+
+	return 0;
+}
+
+int tc_amd_assign_pstate(int pstate_type, uint8_t index, uint32_t clock, uint32_t voltage, const char *hwmon_dir_name) {
+	// Used for writing the correct pstate, eg. m, c, vc
+	char pstate_type_specifier[8];
+
+	switch (pstate_type) {
+		case PSTATE_CORE:
+			snprintf(pstate_type_specifier, 8, "c");
+			goto clock_voltage_pair;
+		case PSTATE_MEMORY:
+			snprintf(pstate_type_specifier, 8, "m");
+			goto clock_voltage_pair;
+		default:
+			return 1;
+	}
+
+clock_voltage_pair: ;
+	// Go up 2 directories where pp_od_clk_voltage is
+	if (chdir(hwmon_dir_name) != 0 || chdir("../..") != 0) {
+		return 1;
+	}
+	const char *pstate_file_name = "pp_od_clk_voltage";
+
+	// Get file descriptor
+	int fd = open(pstate_file_name, O_WRONLY);
+	if (fd < 1) {
+		// Couldn't get file descriptor for writing
+		return 1;
+	}
+	char cmd_string[32];
+	// Copy the values to the string that's written to the file
+	snprintf(cmd_string, 32, "%s %u %u %u", pstate_type_specifier, index, clock, voltage);
+
+	int retval = write(fd, cmd_string, strlen(cmd_string));
+	if (retval < 1) {
+		// Couldn't write the value
+		return 1;
+	}
+	// Write "c" to apply
+	retval = write(fd, "c", strlen("c"));
+	if (retval < 1) {
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -418,9 +470,9 @@ sensor_file:
 	}
 
 	// Read the file
-	/*FILE *s_file = NULL;
-	switch (sensor_enum) {
-		case SENSOR_FAN_PERCENTAGE :
+	FILE *s_file = NULL;
+	switch (sensor_type) {
+		case SENSOR_FAN_PERCENTAGE:
 			s_file = fopen("pwm1", "r");
 			if (s_file == NULL) {
 				return 1;	
@@ -431,12 +483,11 @@ sensor_file:
 			return 0;
 		default : return 1;
 	}
-	*/
-	printf("Reading fanspeed\n");
+	/*
 	FILE *file = fopen("pwm1", "r");
 	fscanf(file, "%d", reading);
 	*reading /= 2.55;
-	
+	*/
 	return 0;
 }
 
