@@ -333,11 +333,6 @@ int tc_amd_assign_value(int tunable_enum, int target_value, const char *hwmon_di
 		// Couldn't write the value
 		return 1;
 	}
-	// Apply by writing 'c'
-	retval = write(fd, "c", strlen("c"));
-	if (retval < 1) {
-		return 1;
-	}
 
 	return 0;
 }
@@ -348,7 +343,7 @@ int tc_amd_assign_pstate(int pstate_type, uint8_t index, uint32_t clock, uint32_
 
 	switch (pstate_type) {
 		case PSTATE_CORE:
-			snprintf(pstate_type_specifier, 8, "c");
+			snprintf(pstate_type_specifier, 8, "s");
 			goto clock_voltage_pair;
 		case PSTATE_MEMORY:
 			snprintf(pstate_type_specifier, 8, "m");
@@ -380,10 +375,10 @@ clock_voltage_pair: ;
 		return 1;
 	}
 	// Write "c" to apply
-	retval = write(fd, "c", strlen("c"));
+	/*retval = write(fd, "c", strlen("c"));
 	if (retval < 1) {
 		return 1;
-	}
+	}*/
 
 	return 0;
 }

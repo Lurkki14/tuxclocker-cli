@@ -22,14 +22,14 @@ typedef struct {
 	int (*setup_function)(void*, gpu**, uint8_t*);
 } gpu_handler;
 
-// Print the GPU name and the index the program uses
-void print_gpu_info();
+// Print the GPU name and the index the program uses. Always returns 0
+int print_gpu_names();
 
 // Print available sensors for GPU by index. Print for all GPU's if idx < 0
 void print_gpu_sensor_values(int idx);
 
 // Assign a value for a tunable by GPU index
-void assign_gpu_tunable(int idx, char *tunable_name, char *target_value);
+int assign_gpu_tunable();
 
 // Print help
 void print_help();
