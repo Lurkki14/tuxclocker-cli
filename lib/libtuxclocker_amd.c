@@ -461,7 +461,7 @@ sensor_file:
 	// Change directory to the hwmon directory
 	retval = chdir(hwmon_dir_name);
 	if (retval != 0) {
-		return 1;		
+		return 1;
 	}
 
 	// Read the file

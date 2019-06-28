@@ -26,27 +26,27 @@ typedef struct {
 int print_gpu_names();
 
 // Print available sensors for GPU by index. Print for all GPU's if idx < 0
-void print_gpu_sensor_values(int idx);
+int print_gpu_sensor_values();
 
 // Assign a value for a tunable by GPU index
 int assign_gpu_tunable();
 
 // Print help
-void print_help();
-
-// Print available tunables and their range for by GPU index
-void print_available_tunables(int idx);
+int print_help();
 
 // Print pstate info for AMD GPUs
-void print_pstate_info();
+int print_pstate_info();
 
-// List available tunables and their range
-void list_tunables(int idx);
+// List available tunables and their range.
+int list_tunables();
 
 void assign_pstate(int idx, char *pstate_type, int clock, int voltage);
 
 // Functions for checking validity of arguments
 bool contains_digit(const char *str);
 bool contains_alpha(const char *str);
+
+// Function to check if a GPU by an index exists. Returns the index if idx_char is valid and -1 when not.
+int get_gpu_index(uint8_t gpu_count, char *idx_char);
 
 #endif

@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	if (argc < 2) {
-		printf("No options specified. Run with --help for help.\n");
+		printf("No options specified. Run with 'help' for help.\n");
 		return 0;
 	}
 
@@ -69,8 +69,21 @@ int main(int argc, char **argv) {
 		gpu_handler_list[gpu_handler_list_len - 1].lib_handle = libtc_amd;
 	}
 	// Structure of the argument tree
+				const opt_node __list_pstates = {"pstates", 0, NULL, 0, NULL, &print_pstate_info};
+				const opt_node *_list_pstates = &__list_pstates;
+	
+				const opt_node __list_tunables = {"tunables", 0, NULL, 0, NULL, &list_tunables};
+				const opt_node *_list_tunables = &__list_tunables;
 
-                const opt_node __list = {"list", 0, NULL, 0, NULL, &print_gpu_names};
+				const opt_node __list_sensors = {"sensors", 0, NULL, 0, NULL, &print_gpu_sensor_values};
+				const opt_node *_list_sensors = &__list_sensors;
+
+			const opt_node *l_index_ch[] = {_list_sensors, _list_tunables, _list_pstates};
+                        const opt_node _l_index = {"index", 3, l_index_ch, 1, &gpu_index_flag, NULL};
+                        const opt_node *l_index = &_l_index;
+
+		const opt_node *list_ch[] = {l_index};
+                const opt_node __list = {"list", 1, list_ch, 0, NULL, &print_gpu_names};
                 const opt_node *_list = &__list;                                            
 
                                         const opt_node __tunable_value = {"value", 0, NULL, 1, &tunable_value_flag, &assign_gpu_tunable};
@@ -88,8 +101,11 @@ int main(int argc, char **argv) {
                 const opt_node __set = {"set", 1, set_ch, 0, NULL, NULL};
                 const opt_node *_set = &__set;
 
-        const opt_node *root_ch[] = {_list, _set};
-        const opt_node _root = {"root", 2, root_ch, 0, NULL, NULL};
+		const opt_node __help = {"help", 0, NULL, 0, NULL, &print_help};
+		const opt_node *_help = &__help;
+
+        const opt_node *root_ch[] = {_list, _set, _help};
+        const opt_node _root = {"root", 3, root_ch, 0, NULL, NULL};
         const opt_node *root = &_root;
 
         // Find the matcing items for the arguments     
@@ -157,6 +173,22 @@ bool contains_alpha(const char *str) {
 	return false;
 }
 
+int get_gpu_index(uint8_t gpu_count, char *idx_char) {
+	int idx = -1;
+	if (!contains_digit(idx_char)) {
+		fprintf(stderr, "Error: not a GPU index: %s\n", idx_char);
+		return idx;
+	} else {
+		idx = atoi(gpu_index_flag);
+	}
+	if (gpu_list_len - 1 < idx || idx < 0) {
+		fprintf(stderr, "Error: no GPU with index %d\n", idx);
+		return -1;
+	}
+	return idx;
+}
+
+
 int print_gpu_names() {
 	for (uint8_t i=0; i<gpu_handler_list_len; i++) {
 		gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
@@ -201,7 +233,7 @@ int print_gpu_names() {
 	return 0;
 }
 
-void print_pstate_info() {
+int print_pstate_info() {
 	// Setup GPUs
         for (uint8_t i=0; i<gpu_handler_list_len; i++)
                gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
@@ -210,87 +242,109 @@ void print_pstate_info() {
 	int (*amd_get_pstate_info)(amd_pstate_info*, const char*) = dlsym(libtc_amd, "tc_amd_get_pstate_info");
     	int retval = 0;
 
-	for (uint8_t i=0; i<gpu_list_len; i++) {
-		if (gpu_list[i].gpu_type == AMD) {
-			amd_pstate_info info = {0,0,0,0,0,0,0,0,0,0,0,0};
-			retval = amd_get_pstate_info(&info, gpu_list[i].hwmon_path);
-			if (retval != 0)
-				continue;
+	int idx = get_gpu_index(gpu_list_len, gpu_index_flag);
+	if (idx < 0) {
+		return 1;
+	}
 
-			// Print the core pstates
-			if (info.c_pstate_count > 0) {
-				printf("Core pstates for GPU %u:\n", i);
-				printf("\t%-6s %-18s %-18s", "Index", "Frequency (MHz)", "Voltage (mV)\n");
-				for (uint8_t j=0; j<info.c_pstate_count; j++) {
-					printf("\t%-6u %-18u %-18u\n", j, info.c_clocks[j], info.c_voltages[j]);
-				}
-			}
-			// Print memory pstates
-			if (info.m_pstate_count > 0) {
-				printf("Memory pstates for GPU %u:\n", i);
-				printf("\t%-6s %-18s %-18s", "Index", "Frequency (MHz)", "Voltage (mV)\n");
-				for (uint8_t j=0; j<info.m_pstate_count; j++) {  
-					printf("\t%-6u %-18u %-18u\n", j, info.m_clocks[j], info.m_voltages[j]);
-				}
-			}
-			// Print limits
-			if (info.min_voltage != 0 && info.max_voltage != 0) {
-				printf("Pstate value limits for GPU %u:\n", i);
-				printf("\tVoltage: %u - %u mV\n", info.min_voltage, info.max_voltage);
-				printf("\tCore clock: %u - %u MHz\n", info.min_c_clock, info.max_c_clock);
-				printf("\tMemory clock: %u - %u MHz\n", info.min_m_clock, info.max_m_clock);
+	if (gpu_list[idx].gpu_type == AMD) {
+		amd_pstate_info info = {0,0,0,0,0,0,0,0,0,0,0,0};
+		retval = amd_get_pstate_info(&info, gpu_list[idx].hwmon_path);
+		if (retval != 0) {
+			return 1;
+		}
+
+		// Print the core pstates
+		if (info.c_pstate_count > 0) {
+			printf("Core pstates for GPU %u:\n", idx);
+			printf("\t%-6s %-18s %-18s", "Index", "Frequency (MHz)", "Voltage (mV)\n");
+			for (uint8_t j=0; j<info.c_pstate_count; j++) {
+				printf("\t%-6u %-18u %-18u\n", j, info.c_clocks[j], info.c_voltages[j]);
 			}
 		}
+		// Print memory pstates
+		if (info.m_pstate_count > 0) {
+			printf("Memory pstates for GPU %u:\n", idx);
+			printf("\t%-6s %-18s %-18s", "Index", "Frequency (MHz)", "Voltage (mV)\n");
+			for (uint8_t j=0; j<info.m_pstate_count; j++) {  
+				printf("\t%-6u %-18u %-18u\n", j, info.m_clocks[j], info.m_voltages[j]);
+			}
+		}
+		// Print limits
+		if (info.min_voltage != 0 && info.max_voltage != 0) {
+			printf("Pstate value limits for GPU %u:\n", idx);
+			printf("\tVoltage: %u - %u mV\n", info.min_voltage, info.max_voltage);
+			printf("\tCore clock: %u - %u MHz\n", info.min_c_clock, info.max_c_clock);
+			printf("\tMemory clock: %u - %u MHz\n", info.min_m_clock, info.max_m_clock);
+		}
 	}
+	return 0;
 }	
 
-void print_gpu_sensor_values(int idx) {
+int print_gpu_sensor_values() {
 	// Setup GPUs
 	for (uint8_t i=0; i<gpu_handler_list_len; i++)
 	       gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len); 	
 	
-	int (*amd_get_sensor_value)(void*, int*, int, const char*) = dlsym(libtc_amd, "tc_amd_get_gpu_sensor_value");
-	int reading = 0;
-	int retval = 0;
+	// Check if index is valid
+	int idx = -1;
+        if (!contains_digit(gpu_index_flag)) {
+                fprintf(stderr, "Error: not a GPU index: %s\n", gpu_index_flag);
+                return 1;
+        } else {
+                idx = atoi(gpu_index_flag);
+        }
+        if (gpu_list_len - 1 < idx || idx < 0) {
+               fprintf(stderr, "Error: no GPU with index %d\n", idx);
+               return 1;
+        }
 
-	for (uint8_t i=0; i<gpu_list_len; i++) {
-		printf("Sensor readings for GPU %u:\n", i);
-		switch (gpu_list[i].gpu_type) {
-			case AMD:
-				// Try to print a value for all sensor enums
-				for (int j=SENSOR_TEMP; j<SENSOR_MEMORY_MB_USAGE + 1; j++) { 
-					retval = amd_get_sensor_value(gpu_list[i].amd_handle, &reading, j, gpu_list[i].hwmon_path);
-					if (retval == 0)
-						printf("\t%s: %d %s\n", sensor_names[j], reading, sensor_units[j]);
-						//printf("\t%s\n", gpu_list[i].hwmon_path);
+	int retval = 0;
+	int reading = 0;
+	printf("Sensor readings for GPU %d:\n", idx);
+	switch (gpu_list[idx].gpu_type) {
+		case AMD: ;
+			int (*amd_get_sensor)(void*, int*, int, const char*) = dlsym(libtc_amd, "tc_amd_get_gpu_sensor_value");
+			// Try to print a value for all sensor enums
+			for (int i=0; i<sizeof(sensor_names) / sizeof(char**); i++) {
+				retval = amd_get_sensor(gpu_list[idx].amd_handle, &reading, i, gpu_list[idx].hwmon_path);
+				if (retval == 0) {
+					printf("\t%s: %d %s\n", sensor_names[i], reading, sensor_units[i]);
 				}
-			default: continue;
-		}
+			}
+		default:
+			return 1;
 	}
+
+	return 0;
 }
 
-void list_tunables(int idx) {
+int list_tunables() {
 	// Setup GPUs
 	for (uint8_t i=0; i<gpu_handler_list_len; i++) {
 		gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
 	}
+	int idx = get_gpu_index(gpu_list_len, gpu_index_flag);
+	if (idx < 0) {
+		// The error message is printed in the function
+		return 1;
+	}
+
 	int retval = 0;
-	for (uint8_t i=0; i<gpu_list_len; i++) {
-		printf("Available tunables for GPU %u:\n", i);
-		switch (gpu_list[i].gpu_type) {
-			case AMD: ; 
-				// Check what tunables we get a range successfully for
-				tunable_valid_range range;
-				for (int j=TUNABLE_FAN_SPEED_PERCENTAGE; j<TUNABLE_MEMORY_VOLTAGE + 1; j++) {
-					retval = amd_get_tunable_range(&range, j, gpu_list[i].hwmon_path,
-							gpu_handler_list[i].lib_handle, gpu_list[i].amd_handle);
-					if (retval == 0) {
-						printf("\t%s: range %u - %u %s, Value type: %s\n", tunable_names[j], range.min, range.max, tunable_units[j], tunable_value_type_names[range.tunable_value_type]);
-					}
+	printf("Available tunables for GPU %u:\n", idx);
+	switch (gpu_list[idx].gpu_type) {
+		case AMD: ; 
+			// Check what tunables we get a range successfully for
+			tunable_valid_range range;
+			for (int j=0; j<sizeof(tunable_names) / sizeof(char**); j++) {
+				retval = amd_get_tunable_range(&range, j, gpu_list[idx].hwmon_path,
+						gpu_handler_list[idx].lib_handle, gpu_list[idx].amd_handle);
+				if (retval == 0) {
+					printf("\t%s: range %u - %u %s, Value type: %s\n", tunable_names[j], range.min, range.max, tunable_units[j], tunable_value_type_names[range.tunable_value_type]);
 				}
-			default: continue;
-		}
-	}	
+			}
+		default: return 1;
+	}
 }
 
 void assign_pstate(int idx, char *pstate_type, int clock, int voltage) {
@@ -388,44 +442,9 @@ int assign_gpu_tunable() {
 			break;
 	}
 	return retval;
-
-	/*int (*amd_assign_value)(int, int, const char*, void*) = dlsym(libtc_amd, "tc_amd_assign_value");
-	// Check what index in tunable_arg_names tunable_names matches - it's the enum of tunable_type
-	for (int i=0; i<TUNABLE_MEMORY_VOLTAGE + 1; i++) {
-		if (strcmp(tunable_arg_names[i], tunable_name) == 0) {
-			// Found a matching name, call the function
-			int retval = 0;
-			switch (gpu_list[idx].gpu_type) {
-				case AMD:
-					// Fan mode is assigned by text
-					switch (i) {
-						case TUNABLE_FAN_MODE:
-							// Check what enum target_value matches
-							for (int j=0; j<sizeof(fan_mode_arg_names) / sizeof(char**); j++) {
-									if (strcmp(fan_mode_arg_names[j], target_value) == 0) {
-										retval = amd_assign_value(i, j, gpu_list[idx].hwmon_path, gpu_list[idx].amd_handle);
-										if (retval != 0) {
-											printf("Error: couldn't assign tunable %s to value %s: %s\n", tunable_arg_names[i], target_value, strerror(errno));
-										}
-										return;
-									}
-							}
-							printf("Error: no such fanmode as %s\n", target_value);
-						default:
-							retval = amd_assign_value(i, atoi(target_value), gpu_list[idx].hwmon_path, gpu_list[idx].amd_handle);
-							if (retval != 0) {
-								printf("Error: couldn't assign tunable %s to value %d: %s\n", tunable_arg_names[i], atoi(target_value), strerror(errno));
-							}
-							return;
-					}
-				default:
-					continue;
-			}
-		}
-	}*/
 }
 
-void print_help() {
+int print_help() {
 	static const char *help_message = "usage: tuxclocker-cli [option]\n"
 					"Options:\n"
 					"  --list\n"
@@ -439,4 +458,5 @@ void print_help() {
 					"  --list_pstate_info\n";
 
 	printf("%s", help_message);
+	return 0;
 }
