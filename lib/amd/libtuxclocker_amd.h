@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "libtuxclocker.h"
+#include "../libtuxclocker.h"
 
 /* Return the file descriptors for valid AMD GPUs in fds and the amount in len, takes the
    size of the array in size. Returns 1 when size is less than the mount of file descriptors.

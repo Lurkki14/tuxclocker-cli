@@ -12,7 +12,7 @@
 #include <libdrm/amdgpu_drm.h>
 
 #include "libtuxclocker_amd.h"
-#include "libtuxclocker.h"
+#include "../libtuxclocker.h"
 
 int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle) {
 	if (sizeof(amdgpu_device_handle) > size)

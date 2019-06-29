@@ -1,1 +1,2 @@
-option('with_amd',        type: 'boolean', value: 'false', description: 'build with amd support')
+option('with_amd', type: 'boolean', value: 'false', description: 'Build with AMD support')
+option('with_nvidia', type: 'boolean', value: 'false', description: 'Build with Nvidia support')
