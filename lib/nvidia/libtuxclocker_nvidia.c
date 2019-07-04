@@ -33,23 +33,19 @@ int tc_nvidia_get_nvml_handle_by_index(void **nvml_handle, int index) {
 }
 
 int tc_nvidia_get_nvctrl_handle(void **nvctrl_handle) {
-	*nvctrl_handle = malloc(sizeof(Display*));
-	Display *dpy = XOpenDisplay(NULL);
-	if (dpy == NULL) {
+	*nvctrl_handle = XOpenDisplay(NULL);
+	if (*nvctrl_handle == NULL) {
 		// Couldn't get X display
-		free(*nvctrl_handle);
 		return 1;
 	}
 	// Check if the nvidia extension is present
-	int *event_basep = NULL, *error_basep = NULL;
-	Bool retval = XNVCTRLQueryExtension(dpy, event_basep, error_basep);
+	int event_basep, error_basep;
+	Bool retval = XNVCTRLQueryExtension((Display*) *nvctrl_handle, &event_basep, &error_basep);
 	if (!retval) {
 		// Extension wasn't found
-		free(*nvctrl_handle);
 		return 1;
 	}
 	// Success
-	*nvctrl_handle = dpy;
 	return 0;
 }
 
@@ -95,11 +91,19 @@ int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_in
 			info->readings.u_reading = utils.memory;
 			return retval;
 		}
-		/*case SENSOR_CORE_VOLTAGE: ; {
-			info->sensor_data_type = SENSOR_TYPE_UINT;
-			Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, 0, 0, NV_CTRL_GPU_CURRENT_CORE_VOLTAGE, &(info->readings.u_reading));
-			return retval;
-		}*/
+		case SENSOR_CORE_VOLTAGE: ; {
+			info->sensor_data_type = SENSOR_TYPE_DOUBLE;
+			int reading = 0;
+			Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, 0, 0, NV_CTRL_GPU_CURRENT_CORE_VOLTAGE, &reading);
+			// Divide by 1000 to get millivolts
+			info->readings.d_reading = (double) reading / 1000;
+			
+			if (retval) {
+				// Success
+				return 0;
+			}
+			return 1;
+		}
 		default:
 			return 1;
 	}

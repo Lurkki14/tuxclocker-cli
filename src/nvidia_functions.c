@@ -23,17 +23,13 @@ int nvidia_setup_gpus(void *lib_handle, gpu **gpu_list, uint8_t *gpu_list_len) {
 		void *nvml_handle = NULL, *nvctrl_handle = NULL;
 		int nvml_retval = 0, nvctrl_retval = 0;
 		nvml_retval = nv_get_nvml_handle(&nvml_handle, i);
-		//nvctrl_retval = nv_get_nvctrl_handle(&nvctrl_handle);
+		nvctrl_retval = nv_get_nvctrl_handle(&nvctrl_handle);
 		
 		if (nvml_retval != 0 && nvctrl_retval != 0) {
 			// Couldn't get either handle
 			continue;
 		}
-		/*int (*get_name)(void*, int, size_t) = dlsym(lib_handle, "tc_nvidia_get_nvml_gpu_name");
-		char name[64];
-		get_name(nvml_handle, &name, 64);
-		printf("%s\n", name);*/
-
+		//printf("retval for dpy: %d\n", nvctrl_retval);
 		// Add the GPU to the list
 		gpu_list[*gpu_list_len] = malloc(sizeof(gpu));
 		gpu_list[*gpu_list_len]->nvml_handle = nvml_handle;
