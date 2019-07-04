@@ -9,6 +9,7 @@
 
 #include "../lib/libtuxclocker.h"
 #include "amd_functions.h"
+#include "nvidia_functions.h"
 #include "tuxclocker-cli.h"
 
 extern int errno;
@@ -68,6 +69,14 @@ int main(int argc, char **argv) {
 		gpu_handler_list[gpu_handler_list_len - 1].setup_function = &amd_setup_gpus;
 		gpu_handler_list[gpu_handler_list_len - 1].lib_handle = libtc_amd;
 	}
+	if (libtc_nvidia != NULL) {
+		gpu_handler_list_len++;
+                gpu_handler_list = realloc(gpu_handler_list, sizeof(gpu_handler) * gpu_handler_list_len);
+
+                gpu_handler_list[gpu_handler_list_len - 1].setup_function = &nvidia_setup_gpus;
+                gpu_handler_list[gpu_handler_list_len - 1].lib_handle = libtc_nvidia;
+	}
+
 	// Structure of the argument tree
 				const opt_node __list_pstates = {"pstates", 0, NULL, 0, NULL, &print_pstate_info};
 				const opt_node *_list_pstates = &__list_pstates;
@@ -201,6 +210,7 @@ int print_gpu_names() {
 
 	uint8_t valid_names_len = 0;
 	int retval = 0;
+	size_t name_len = 0;
 	int (*amd_get_gpu_name)(void*, size_t, char(*)[]) = dlsym(libtc_amd, "tc_amd_get_gpu_name");
 	for (uint8_t i=0; i<gpu_list_len; i++) {
 		switch (gpu_list[i].gpu_type) {
@@ -209,7 +219,20 @@ int print_gpu_names() {
 				if (retval != 0)
 					continue;
 				
-				size_t name_len = strlen(buf);
+				name_len = strlen(buf);
+				if (name_len > longest_name_len)
+					longest_name_len = name_len;
+
+				valid_names_len++;
+				gpu_names[valid_names_len - 1] = strdup(buf);
+				break;
+			case NVIDIA: ;
+				int (*nv_get_gpu_name)(void*, char (*)[], size_t) = dlsym(libtc_nvidia, "tc_nvidia_get_nvml_gpu_name");
+				retval = nv_get_gpu_name(gpu_list[i].nvml_handle, &buf, MAX_STRLEN);
+				if (retval != 0) {
+					continue;
+				}
+				name_len = strlen(buf);
 				if (name_len > longest_name_len)
 					longest_name_len = name_len;
 
@@ -222,12 +245,12 @@ int print_gpu_names() {
 
 	// Print the GPU names and indices
 	printf("%-*s %8s\n", (int) longest_name_len, "GPU", "Index");
-	for (uint8_t i=0; i<gpu_list_len; i++) {
+	for (uint8_t i=0; i<valid_names_len; i++) {
 		printf("%-*s %8u\n", (int) longest_name_len, gpu_names[i], i);
 	}
 	// Free the memory
-	for (int i=0; i<gpu_list_len; i++)
-		free(gpu_names[i]);	
+	for (int i=0; i<valid_names_len; i++)
+		free(gpu_names[i]);
 
 	free(gpu_names);		
 	return 0;
@@ -310,6 +333,26 @@ int print_gpu_sensor_values() {
 				retval = amd_get_sensor(gpu_list[idx].amd_handle, &reading, i, gpu_list[idx].hwmon_path);
 				if (retval == 0) {
 					printf("\t%s: %d %s\n", sensor_names[i], reading, sensor_units[i]);
+				}
+			}
+		case NVIDIA: ;
+			int (*nvidia_get_sensor)(void*, void*, sensor_info*, int) = dlsym(libtc_nvidia, "tc_nvidia_get_sensor_value");
+			sensor_info info;
+			for (uint8_t i=0; i<sizeof(sensor_names) / sizeof(char**); i++) {
+				retval = nvidia_get_sensor(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &info, i);
+				if (retval != 0) {
+					continue;
+				}
+				// Display the correct data type
+				switch (info.sensor_data_type) {
+					case SENSOR_TYPE_UINT:
+						printf("\t%s: %u %s\n", sensor_names[i], info.readings.u_reading, sensor_units[i]);
+						break;
+					case SENSOR_TYPE_DOUBLE:
+						printf("\t%s: %f %s\n", sensor_names[i], info.readings.d_reading, sensor_units[i]);
+						break;
+					default:
+						break;
 				}
 			}
 		default:
@@ -445,17 +488,22 @@ int assign_gpu_tunable() {
 }
 
 int print_help() {
-	static const char *help_message = "usage: tuxclocker-cli [option]\n"
+	static const char *help_message = "usage: tuxclocker-cli [options]\n"
+					"Options are read as a hierarchical tree, so for example to list sensor\n"
+					"readings for GPU 0: do 'tuxclocker-cli list 0 sensors'\n"
 					"Options:\n"
-					"  --list\n"
-					"  --list_sensors\n"
-					"  --list_tunables\n"
-					"  --set_tunable <index tunable value>\n"
-					"  \tWhere tunable is one of: fanspeed, fanmode, powerlimit, coreclock, memclock, corevoltage, memvoltage\n"
-					"  \tValues for fanmode: auto, manual\n"
-					"  --set_pstate <index type clock voltage>\n"
-					"  \tWhere type is one of: core, mem\n"
-					"  --list_pstate_info\n";
+					"  list\n"
+					"    <index>\n"
+					"      sensors\n"
+					"      tunables\n"
+					"      pstates\n"
+					"  set\n"
+					"    <index>\n"
+					"      <tunable>\n"
+					"        Where tunable is one of: fanspeed, fanmode, powerlimit, coreclock, memclock, corevoltage, memvoltage\n"
+					"          <value>\n"
+					"            Values for fanmode: auto, manual\n"
+					"  help\n";
 
 	printf("%s", help_message);
 	return 0;

@@ -14,6 +14,10 @@ typedef struct {
 	void *amd_handle;
 	int fd;
 	char *hwmon_path; // Path for reading AMD sysfs
+
+	// NVML and XNVCtrl handles (XNVCtrl handle is just a Display*, but there's no reason to include its definition here)
+	void *nvctrl_handle;
+	void *nvml_handle;
 } gpu;
 
 

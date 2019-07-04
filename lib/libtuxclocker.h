@@ -23,7 +23,7 @@ static const char *fan_mode_arg_names[] = {"auto", "manual"};
 
 // Sensor names for displaying values
 static const char *sensor_names[] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
-        "Core utilization", "Memory Clock", "Memory Utilization", "Memory Usage"};
+        "Core Utilization", "Memory Clock", "Memory Utilization", "Memory Usage"};
 // Units for displaying values
 static const char *sensor_units[] = {"°C", "%", "RPM", "MHz", "mV", "W", "%", "MHz", "%", "MB"};
 
@@ -34,6 +34,19 @@ enum gpu_type {AMD, NVIDIA};
 // Pstate types for pre-Vega VII GPUs
 enum amd_pstate_type {PSTATE_CORE, PSTATE_MEMORY};
 static const char *amd_pstate_type_args[] = {"core", "mem"};
+
+// Data types for getting sensor readings with different data types
+enum sensor_data_type {SENSOR_TYPE_UINT, SENSOR_TYPE_DOUBLE};
+
+union sensor_readings {
+	double d_reading;
+	uint32_t u_reading;
+};
+
+typedef struct {
+	int sensor_data_type;
+	union sensor_readings readings;
+} sensor_info;
 
 // Used for getting the limits for a tunable
 typedef struct {

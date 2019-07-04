@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "amd_functions.h"
-//#include "../lib/libtuxclocker.h"
+#include "../lib/libtuxclocker.h"
 
 int amd_setup_gpus(void *lib_handle, gpu **gpu_list, uint8_t *gpu_list_len) {
 	// Get file descriptors and hwmon paths

@@ -20,7 +20,7 @@ if get_option('with_nvidia')
   lib_xnvctrl = cc.find_library('XNVCtrl')
   xlib_h = cc.has_header('X11/Xlib.h')
   nvctrl_h = cc.has_header('NVCtrl/NVCtrlLib.h')
-  subdir('lib')
+  subdir('lib/nvidia')
 endif
 
 subdir('src')
