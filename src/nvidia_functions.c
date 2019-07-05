@@ -29,11 +29,11 @@ int nvidia_setup_gpus(void *lib_handle, gpu **gpu_list, uint8_t *gpu_list_len) {
 			// Couldn't get either handle
 			continue;
 		}
-		//printf("retval for dpy: %d\n", nvctrl_retval);
 		// Add the GPU to the list
 		gpu_list[*gpu_list_len] = malloc(sizeof(gpu));
 		gpu_list[*gpu_list_len]->nvml_handle = nvml_handle;
 		gpu_list[*gpu_list_len]->nvctrl_handle = nvctrl_handle;
+		gpu_list[*gpu_list_len]->nvidia_index = i;
 		gpu_list[*gpu_list_len]->gpu_type = NVIDIA;
 		*gpu_list_len += 1;
 	}

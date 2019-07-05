@@ -336,10 +336,10 @@ int print_gpu_sensor_values() {
 				}
 			}
 		case NVIDIA: ;
-			int (*nvidia_get_sensor)(void*, void*, sensor_info*, int) = dlsym(libtc_nvidia, "tc_nvidia_get_sensor_value");
+			int (*nvidia_get_sensor)(void*, void*, sensor_info*, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_sensor_value");
 			sensor_info info;
 			for (uint8_t i=0; i<sizeof(sensor_names) / sizeof(char**); i++) {
-				retval = nvidia_get_sensor(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &info, i);
+				retval = nvidia_get_sensor(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &info, i, gpu_list[idx].nvidia_index);
 				if (retval != 0) {
 					continue;
 				}
@@ -386,6 +386,17 @@ int list_tunables() {
 					printf("\t%s: range %u - %u %s, Value type: %s\n", tunable_names[j], range.min, range.max, tunable_units[j], tunable_value_type_names[range.tunable_value_type]);
 				}
 			}
+		case NVIDIA: {
+			tunable_valid_range range;
+			int (*nvidia_get_range)(void*, void*, tunable_valid_range*, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_tunable_range");
+			for (uint8_t i=0; i<sizeof(tunable_names) / sizeof(char**); i++) {
+					retval = nvidia_get_range(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &range, i, gpu_list[idx].nvidia_index);
+					if (retval == 0) {
+						printf("\t%s: range %u - %u %s, Value type: %s\n", tunable_names[i], range.min, range.max, tunable_units[i], tunable_value_type_names[range.tunable_value_type]);
+	
+					}
+			}
+		}
 		default: return 1;
 	}
 }

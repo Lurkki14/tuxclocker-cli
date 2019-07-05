@@ -50,8 +50,8 @@ typedef struct {
 
 // Used for getting the limits for a tunable
 typedef struct {
-	uint32_t min;
-	uint32_t max;
+	int min;
+	int max;
 
 	int tunable_value_type;
 } tunable_valid_range;

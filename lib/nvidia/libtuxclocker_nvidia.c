@@ -54,10 +54,14 @@ int tc_nvidia_get_nvml_gpu_name(void *nvml_handle, char (*name)[], size_t str_le
 	return retval;
 }
 
-int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_info *info, int sensor_enum) {
+int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_info *info, int sensor_enum, int gpu_index) {
 	// Check if the reading is from NVML or NVCtrl and what function is called
 	switch (sensor_enum) {
 		case SENSOR_POWER_DRAW: ; {
+			if (nvml_handle == NULL) {
+				return 1;
+			}
+
 			info->sensor_data_type = SENSOR_TYPE_DOUBLE;
 			uint32_t reading = 0;
 			nvmlReturn_t retval = nvmlDeviceGetPowerUsage(*(nvmlDevice_t*) nvml_handle, &reading);
@@ -94,7 +98,7 @@ int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_in
 		case SENSOR_CORE_VOLTAGE: ; {
 			info->sensor_data_type = SENSOR_TYPE_DOUBLE;
 			int reading = 0;
-			Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, 0, 0, NV_CTRL_GPU_CURRENT_CORE_VOLTAGE, &reading);
+			Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, 0, NV_CTRL_GPU_CURRENT_CORE_VOLTAGE, &reading);
 			// Divide by 1000 to get millivolts
 			info->readings.d_reading = (double) reading / 1000;
 			
@@ -108,4 +112,42 @@ int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_in
 			return 1;
 	}
 
+}
+
+int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_valid_range *range, int tunable_enum, int gpu_index) {
+	switch (tunable_enum) {
+		case TUNABLE_POWER_LIMIT: ; {
+			uint32_t min, max;
+			nvmlReturn_t retval = nvmlDeviceGetPowerManagementLimitConstraints(*(nvmlDevice_t*) nvml_handle, &min, &max);
+			
+			range->tunable_value_type = TUNABLE_ABSOLUTE;
+			range->min = min / 1000;
+			range->max = max / 1000;
+			return retval;
+		}
+		case TUNABLE_CORE_CLOCK: ;
+			tunable_enum = NV_CTRL_GPU_NVCLOCK_OFFSET;
+			goto range_from_nvctrl;
+		default:
+			return 1;
+	}
+// For ranges gotten through xnvctrl only the tunable enum is changed
+range_from_nvctrl: ;
+	// Contains the ranges for attribute
+	NVCTRLAttributeValidValuesRec range_values;
+	Bool retval = XNVCTRLQueryValidTargetAttributeValues((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, 0, tunable_enum, &range_values);
+
+	if (!retval) {
+		// Failure
+		return 1;
+	}
+	// Check if attribute is writable
+	if ((range_values.permissions & ATTRIBUTE_TYPE_WRITE) == ATTRIBUTE_TYPE_WRITE) {
+		// Success
+		range->tunable_value_type = TUNABLE_OFFSET;
+		range->min = range_values.u.range.min;
+		range->max = range_values.u.range.max;
+		return 0;
+	}
+	return 1;
 }

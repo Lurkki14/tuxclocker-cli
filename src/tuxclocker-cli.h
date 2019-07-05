@@ -18,6 +18,7 @@ typedef struct {
 	// NVML and XNVCtrl handles (XNVCtrl handle is just a Display*, but there's no reason to include its definition here)
 	void *nvctrl_handle;
 	void *nvml_handle;
+	int nvidia_index;
 } gpu;
 
 

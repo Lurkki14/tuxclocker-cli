@@ -19,5 +19,9 @@ int tc_nvidia_get_nvctrl_handle(void **nvctrl_handle);
 int tc_nvidia_get_nvml_gpu_name(void *nvml_handle, char (*buf)[], size_t str_len);
 
 // Get sensor readings by handle. Return the data in info to support arbitrary types
-int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_info *info, int sensor_enum);
+int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_info *info, int sensor_enum, int gpu_idnex);
+
+// Get the limits for a tunable
+int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_valid_range *range, int tunable_enum, int gpu_index);
+
 #endif
