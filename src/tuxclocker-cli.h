@@ -19,6 +19,8 @@ typedef struct {
 	void *nvctrl_handle;
 	void *nvml_handle;
 	int nvidia_index;
+	// Amount of nvidia perf states. Needed to get and set mem/core clock offset.
+	int nvidia_pstate_count;
 } gpu;
 
 

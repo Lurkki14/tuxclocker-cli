@@ -388,11 +388,11 @@ int list_tunables() {
 			}
 		case NVIDIA: {
 			tunable_valid_range range;
-			int (*nvidia_get_range)(void*, void*, tunable_valid_range*, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_tunable_range");
+			int (*nvidia_get_range)(void*, void*, tunable_valid_range*, int, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_tunable_range");
 			for (uint8_t i=0; i<sizeof(tunable_names) / sizeof(char**); i++) {
-					retval = nvidia_get_range(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &range, i, gpu_list[idx].nvidia_index);
+					retval = nvidia_get_range(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &range, i, gpu_list[idx].nvidia_index, gpu_list[idx].nvidia_pstate_count - 1);
 					if (retval == 0) {
-						printf("\t%s: range %u - %u %s, Value type: %s\n", tunable_names[i], range.min, range.max, tunable_units[i], tunable_value_type_names[range.tunable_value_type]);
+						printf("\t%s: range %d - %d %s, Value type: %s\n", tunable_names[i], range.min, range.max, tunable_units[i], tunable_value_type_names[range.tunable_value_type]);
 	
 					}
 			}

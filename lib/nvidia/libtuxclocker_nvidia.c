@@ -114,7 +114,7 @@ int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_in
 
 }
 
-int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_valid_range *range, int tunable_enum, int gpu_index) {
+int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_valid_range *range, int tunable_enum, int gpu_index, int pstate_index) {
 	switch (tunable_enum) {
 		case TUNABLE_POWER_LIMIT: ; {
 			uint32_t min, max;
@@ -125,8 +125,14 @@ int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_
 			range->max = max / 1000;
 			return retval;
 		}
+		case TUNABLE_CORE_VOLTAGE: ;
+			tunable_enum = NV_CTRL_GPU_OVER_VOLTAGE_OFFSET;
+			goto range_from_nvctrl;
 		case TUNABLE_CORE_CLOCK: ;
 			tunable_enum = NV_CTRL_GPU_NVCLOCK_OFFSET;
+			goto range_from_nvctrl;
+		case TUNABLE_MEMORY_CLOCK: ;
+			tunable_enum = NV_CTRL_GPU_MEM_TRANSFER_RATE_OFFSET;
 			goto range_from_nvctrl;
 		default:
 			return 1;
@@ -135,8 +141,9 @@ int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_
 range_from_nvctrl: ;
 	// Contains the ranges for attribute
 	NVCTRLAttributeValidValuesRec range_values;
-	Bool retval = XNVCTRLQueryValidTargetAttributeValues((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, 0, tunable_enum, &range_values);
+	Bool retval = XNVCTRLQueryValidTargetAttributeValues((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, pstate_index, tunable_enum, &range_values);
 
+	//printf("%d - %d\n", range_values.u.range.min, range_values.u.range.max);
 	if (!retval) {
 		// Failure
 		return 1;
@@ -145,9 +152,30 @@ range_from_nvctrl: ;
 	if ((range_values.permissions & ATTRIBUTE_TYPE_WRITE) == ATTRIBUTE_TYPE_WRITE) {
 		// Success
 		range->tunable_value_type = TUNABLE_OFFSET;
-		range->min = range_values.u.range.min;
-		range->max = range_values.u.range.max;
-		return 0;
+		// Convert some units to match the units in libtuxclocker.h
+		switch (tunable_enum) {
+			case NV_CTRL_GPU_OVER_VOLTAGE_OFFSET: ;
+				range->min = range_values.u.range.min / 1000;
+				range->max = range_values.u.range.max / 1000;
+				return 0;
+			case NV_CTRL_GPU_MEM_TRANSFER_RATE_OFFSET: ;
+				range->min = range_values.u.range.min / 2;
+				range->max = range_values.u.range.max / 2;
+				return 0;
+			default:
+				range->min = range_values.u.range.min;
+				range->max = range_values.u.range.max;
+				return 0;
+		}
 	}
 	return 1;
+}
+
+int tc_nvidia_get_pstate_count(void *nvml_handle, int *pstate_count) {
+	// novideo didn't bother to make a separate function for this
+	uint32_t *clocks;
+	int amount = 0;
+	nvmlReturn_t retval = nvmlDeviceGetSupportedMemoryClocks(*(nvmlDevice_t*) nvml_handle, &amount, clocks);
+	*pstate_count = amount;
+	return retval;
 }
