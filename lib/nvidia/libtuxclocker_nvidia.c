@@ -108,6 +108,14 @@ int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_in
 			}
 			return 1;
 		}
+		case SENSOR_MEMORY_MB_USAGE: {
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, 0, NV_CTRL_USED_DEDICATED_GPU_MEMORY, &(info->readings.u_reading));
+			if (!retval) {
+				return 1;
+			}
+			return 0;
+		}
 		default:
 			return 1;
 	}
