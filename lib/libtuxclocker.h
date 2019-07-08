@@ -6,34 +6,39 @@ enum sensor_type {SENSOR_TEMP, SENSOR_FAN_PERCENTAGE, SENSOR_FAN_RPM, SENSOR_COR
 	SENSOR_POWER_DRAW, SENSOR_CORE_UTILIZATION, SENSOR_MEMORY_CLOCK, SENSOR_MEMORY_UTILIZATION,
 	SENSOR_MEMORY_MB_USAGE};
 
+// Enums for querying various other GPU properties eg. total VRAM
+enum gpu_property {PROPERTY_TOTAL_VRAM};
+
+static char *const gpu_properties[] = {"Total VRAM"};
+
 // Enums for modifying GPU parameters
 enum tunable_type {TUNABLE_FAN_SPEED_PERCENTAGE, TUNABLE_FAN_MODE, TUNABLE_POWER_LIMIT, TUNABLE_CORE_CLOCK, TUNABLE_MEMORY_CLOCK,
 	TUNABLE_CORE_VOLTAGE, TUNABLE_MEMORY_VOLTAGE};
 
-static const char *tunable_names[] = {"Fan Speed", "Fan Mode", "Power Limit", "Core Clock", "Memory Clock", "Core Voltage", "Memory Voltage"};
-static const char *tunable_units[] = {"%", "", "W", "MHz", "MHz", "mV", "mV"};
+static char *const tunable_names[] = {"Fan Speed", "Fan Mode", "Power Limit", "Core Clock", "Memory Clock", "Core Voltage", "Memory Voltage"};
+static char *const tunable_units[] = {"%", "", "W", "MHz", "MHz", "mV", "mV"};
 
 // Enum for seeing the value type
 enum tunable_value_type {TUNABLE_ABSOLUTE, TUNABLE_OFFSET};
-static const char *tunable_value_type_names[] = {"Absolute", "Offset"};
+static char *const tunable_value_type_names[] = {"Absolute", "Offset"};
 
 // Enum for fan modes
 enum fan_mode {FAN_MODE_AUTO, FAN_MODE_MANUAL};
-static const char *fan_mode_arg_names[] = {"auto", "manual"};
+static char *const fan_mode_arg_names[] = {"auto", "manual"};
 
 // Sensor names for displaying values
-static const char *sensor_names[] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
+static char *const sensor_names[] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
         "Core Utilization", "Memory Clock", "Memory Utilization", "Memory Usage"};
 // Units for displaying values
-static const char *sensor_units[] = {"°C", "%", "RPM", "MHz", "mV", "W", "%", "MHz", "%", "MB"};
+static char *const sensor_units[] = {"°C", "%", "RPM", "MHz", "mV", "W", "%", "MHz", "%", "MB"};
 
 // Tunable names to be taken in as arguments
-static const char *tunable_arg_names[] = {"fanspeed", "fanmode", "powerlimit", "coreclock", "memclock", "corevoltage", "memvoltage"};
+static char *const tunable_arg_names[] = {"fanspeed", "fanmode", "powerlimit", "coreclock", "memclock", "corevoltage", "memvoltage"};
 enum gpu_type {AMD, NVIDIA};
 
 // Pstate types for pre-Vega VII GPUs
 enum amd_pstate_type {PSTATE_CORE, PSTATE_MEMORY};
-static const char *amd_pstate_type_args[] = {"core", "mem"};
+static char *const amd_pstate_type_args[] = {"core", "mem"};
 
 // Data types for getting sensor readings with different data types
 enum sensor_data_type {SENSOR_TYPE_UINT, SENSOR_TYPE_DOUBLE};
