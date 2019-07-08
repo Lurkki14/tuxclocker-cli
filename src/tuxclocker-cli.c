@@ -492,6 +492,24 @@ int assign_gpu_tunable() {
 			if (retval != 0) {
 				fprintf(stderr, "Error: failed to assign tunable %s to %s: %s\n", tunable_flag, tunable_value_flag, strerror(errno));
 			}
+			break;
+		case NVIDIA: ;
+			int (*nv_assign_value)(void*, void*, int, int, int, int) = dlsym(libtc_nvidia, "tc_nvidia_assign_value");
+			retval = nv_assign_value(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, tunable_enum, target_value, gpu_list[idx].nvidia_index, gpu_list[idx].nvidia_pstate_count - 1);
+			if (retval != 0) {
+				char *error_string = "";
+				// Get the error message from the right library
+				switch (tunable_enum) {
+					case TUNABLE_POWER_LIMIT: ;
+						char *(*nvml_get_error)(int) = dlsym(libtc_nvidia, "tc_nvidia_nvml_error_string_from_retval");
+						error_string = nvml_get_error(retval);
+						break;
+					default:
+						break;
+				}
+				fprintf(stderr, "Error: failed to assign tunable %s to %s: %s\n", tunable_flag, tunable_value_flag, error_string);
+			}
+			break;
 		default:
 			break;
 	}

@@ -134,6 +134,9 @@ int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_
 		case TUNABLE_MEMORY_CLOCK: ;
 			tunable_enum = NV_CTRL_GPU_MEM_TRANSFER_RATE_OFFSET;
 			goto range_from_nvctrl;
+		case TUNABLE_FAN_SPEED_PERCENTAGE:
+			tunable_enum = NV_CTRL_GPU_COOLER_MANUAL_CONTROL;
+			goto range_from_nvctrl;
 		default:
 			return 1;
 	}
@@ -143,7 +146,6 @@ range_from_nvctrl: ;
 	NVCTRLAttributeValidValuesRec range_values;
 	Bool retval = XNVCTRLQueryValidTargetAttributeValues((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, pstate_index, tunable_enum, &range_values);
 
-	//printf("%d - %d\n", range_values.u.range.min, range_values.u.range.max);
 	if (!retval) {
 		// Failure
 		return 1;
@@ -162,6 +164,11 @@ range_from_nvctrl: ;
 				range->min = range_values.u.range.min / 2;
 				range->max = range_values.u.range.max / 2;
 				return 0;
+			case NV_CTRL_GPU_COOLER_MANUAL_CONTROL:
+				range->tunable_value_type = TUNABLE_ABSOLUTE;
+				range->min = 0;
+				range->max = 100;
+				return 0;
 			default:
 				range->min = range_values.u.range.min;
 				range->max = range_values.u.range.max;
@@ -174,8 +181,64 @@ range_from_nvctrl: ;
 int tc_nvidia_get_pstate_count(void *nvml_handle, int *pstate_count) {
 	// novideo didn't bother to make a separate function for this
 	uint32_t *clocks;
-	int amount = 0;
+	uint32_t amount = 0;
 	nvmlReturn_t retval = nvmlDeviceGetSupportedMemoryClocks(*(nvmlDevice_t*) nvml_handle, &amount, clocks);
 	*pstate_count = amount;
 	return retval;
+}
+
+int tc_nvidia_assign_value(void *nvml_handle, void *nvctrl_handle, int tunable_enum, int target_value, int gpu_index, int pstate_index) {
+	// Target enum for xnvctrl
+	int target_enum = 0;
+	switch (tunable_enum) {
+		case TUNABLE_POWER_LIMIT:
+			return nvmlDeviceSetPowerManagementLimit(*(nvmlDevice_t*) nvml_handle, (uint32_t) target_value * 1000);
+		case TUNABLE_CORE_CLOCK: ;
+			tunable_enum = NV_CTRL_GPU_NVCLOCK_OFFSET;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			break;
+		case TUNABLE_FAN_MODE: ;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			switch (target_value) {
+				case FAN_MODE_MANUAL: ;
+					tunable_enum = NV_CTRL_GPU_COOLER_MANUAL_CONTROL;
+					target_value = NV_CTRL_GPU_COOLER_MANUAL_CONTROL_TRUE;
+					break;
+				case FAN_MODE_AUTO: ;
+					tunable_enum = NV_CTRL_GPU_COOLER_MANUAL_CONTROL;
+					target_value = NV_CTRL_GPU_COOLER_MANUAL_CONTROL_FALSE;
+					break;
+				default:
+					return 1;
+			}
+			break;
+		case TUNABLE_MEMORY_CLOCK:
+			tunable_enum = NV_CTRL_GPU_MEM_TRANSFER_RATE_OFFSET;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			// Memory transfer rate is twice the clock speed
+			target_value *= 2;
+			break;
+		case TUNABLE_FAN_SPEED_PERCENTAGE: ;
+			tunable_enum = NV_CTRL_THERMAL_COOLER_LEVEL;
+			target_enum = NV_CTRL_TARGET_TYPE_COOLER;
+			break;
+		case TUNABLE_CORE_VOLTAGE:
+			tunable_enum = NV_CTRL_GPU_OVER_VOLTAGE_OFFSET;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			// Convert to microwatts	
+			target_value *= 1000;
+			break;
+		default:
+			return 1;
+	}
+	// Values assigned with xnvctrl
+	Bool retval = XNVCTRLSetTargetAttributeAndGetStatus((Display*) nvctrl_handle, target_enum, gpu_index, pstate_index, tunable_enum, target_value);
+	if (!retval) {
+		return 1;
+	}
+	return 0;
+}
+
+char *tc_nvidia_nvml_error_string_from_retval(int nvml_retval) {
+	return nvmlErrorString(nvml_retval);
 }

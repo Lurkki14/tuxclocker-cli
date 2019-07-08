@@ -26,4 +26,10 @@ int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_
 
 // Get the amount of performance states for a GPU.
 int tc_nvidia_get_pstate_count(void *nvml_handle, int *pstate_count);
+
+// Assign a tunable per GPU handle. gpu_index and pstate_index are only used for nvctrl.
+int tc_nvidia_assign_value(void *nvml_handle, void *nvctrl_handle, int tunable_enum, int target_value, int gpu_index, int pstate_index);
+
+// Get the error message from NVML per nvml return value.
+char *tc_nvidia_nvml_error_string_from_retval(int nvml_retval);
 #endif
