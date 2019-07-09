@@ -32,4 +32,8 @@ int tc_nvidia_assign_value(void *nvml_handle, void *nvctrl_handle, int tunable_e
 
 // Get the error message from NVML per nvml return value.
 char *tc_nvidia_nvml_error_string_from_retval(int nvml_retval);
+
+// Get a GPU property specified by prop_enum
+int tc_nvidia_get_property_value(void *nvml_handle, void *nvctrl_handle, sensor_info *info, int prop_enum, int gpu_index);
+
 #endif

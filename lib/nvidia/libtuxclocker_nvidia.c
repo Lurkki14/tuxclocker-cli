@@ -110,7 +110,9 @@ int tc_nvidia_get_sensor_value(void *nvml_handle, void *nvctrl_handle, sensor_in
 		}
 		case SENSOR_MEMORY_MB_USAGE: {
 			info->sensor_data_type = SENSOR_TYPE_UINT;
-			Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, 0, NV_CTRL_USED_DEDICATED_GPU_MEMORY, &(info->readings.u_reading));
+			int reading = 0;
+			Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, 0, NV_CTRL_USED_DEDICATED_GPU_MEMORY, &reading);
+			info->readings.u_reading = reading;
 			if (!retval) {
 				return 1;
 			}
@@ -250,3 +252,69 @@ int tc_nvidia_assign_value(void *nvml_handle, void *nvctrl_handle, int tunable_e
 char *tc_nvidia_nvml_error_string_from_retval(int nvml_retval) {
 	return nvmlErrorString(nvml_retval);
 }
+
+int tc_nvidia_get_property_value(void *nvml_handle, void *nvctrl_handle, sensor_info *info, int prop_enum, int gpu_index) {
+	int target_enum = 0;
+	switch (prop_enum) {
+		case PROPERTY_TOTAL_VRAM:
+			prop_enum = NV_CTRL_TOTAL_DEDICATED_GPU_MEMORY;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			goto int_value_from_nvctrl;
+		// Broken
+		/*
+		case PROPERTY_THROTTLE_TEMP:
+			prop_enum = NV_CTRL_GPU_CORE_THRESHOLD;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			goto int_value_from_nvctrl;
+		*/
+		case PROPERTY_PCIE_GEN:
+			prop_enum = NV_CTRL_GPU_PCIE_GENERATION;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			goto int_value_from_nvctrl;
+		case PROPERTY_GPU_CORE_COUNT:
+			prop_enum = NV_CTRL_GPU_CORES;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			goto int_value_from_nvctrl;
+		case PROPERTY_MEM_BUS_WIDTH:
+			prop_enum = NV_CTRL_GPU_MEMORY_BUS_WIDTH;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			goto int_value_from_nvctrl;
+		case PROPERTY_PCIE_MAX_LINK_SPEED:
+			prop_enum = NV_CTRL_GPU_PCIE_MAX_LINK_SPEED;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			goto int_value_from_nvctrl;
+		case PROPERTY_PCIE_LINK_WIDTH:
+			prop_enum = NV_CTRL_GPU_PCIE_CURRENT_LINK_WIDTH;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			goto int_value_from_nvctrl;
+		case PROPERTY_PCIE_CUR_LINK_SPEED:
+			prop_enum = NV_CTRL_GPU_PCIE_CURRENT_LINK_SPEED;
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			goto int_value_from_nvctrl;
+		default:
+			return 1;
+	}
+	return 1;
+int_value_from_nvctrl:
+	info->sensor_data_type = SENSOR_TYPE_UINT;
+	int reading = 0;
+	Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, target_enum, gpu_index, 0, prop_enum, &reading);
+	
+	if (!retval) {
+		return 1;
+	}
+	// Change some values to match defined units
+	switch (prop_enum) {
+		case NV_CTRL_GPU_PCIE_MAX_LINK_SPEED:
+			info->readings.u_reading = reading / 1000;
+			break;
+		case NV_CTRL_GPU_PCIE_CURRENT_LINK_SPEED:
+			info->readings.u_reading = reading / 1000;
+			break;
+		default:
+			info->readings.u_reading = reading;
+			break;
+	}	
+	return 0;
+}
+

@@ -78,6 +78,9 @@ int main(int argc, char **argv) {
 	}
 
 	// Structure of the argument tree
+				const opt_node __list_props = {"props", 0, NULL, 0, NULL, &print_gpu_properties};
+				const opt_node *_list_props = &__list_props;
+				
 				const opt_node __list_pstates = {"pstates", 0, NULL, 0, NULL, &print_pstate_info};
 				const opt_node *_list_pstates = &__list_pstates;
 	
@@ -87,8 +90,8 @@ int main(int argc, char **argv) {
 				const opt_node __list_sensors = {"sensors", 0, NULL, 0, NULL, &print_gpu_sensor_values};
 				const opt_node *_list_sensors = &__list_sensors;
 
-			const opt_node *l_index_ch[] = {_list_sensors, _list_tunables, _list_pstates};
-                        const opt_node _l_index = {"index", 3, l_index_ch, 1, &gpu_index_flag, NULL};
+			const opt_node *l_index_ch[] = {_list_sensors, _list_tunables, _list_pstates, _list_props};
+                        const opt_node _l_index = {"index", 4, l_index_ch, 1, &gpu_index_flag, NULL};
                         const opt_node *l_index = &_l_index;
 
 		const opt_node *list_ch[] = {l_index};
@@ -357,6 +360,44 @@ int print_gpu_sensor_values() {
 			}
 		default:
 			return 1;
+	}
+
+	return 0;
+}
+
+int print_gpu_properties() {
+	// Setup GPUs
+	for (uint8_t i=0; i<gpu_handler_list_len; i++) {
+		gpu_handler_list[i].setup_function(gpu_handler_list[i].lib_handle, &gpu_list, &gpu_list_len);
+	}
+
+	int idx = get_gpu_index(gpu_list_len, gpu_index_flag);
+	if (idx < 0) {
+		// Index argument was invalid
+		return 1;
+	}
+
+	int retval = 0;
+	printf("Properties for GPU %d:\n", idx);
+	switch (gpu_list[idx].gpu_type) {
+		case NVIDIA: ;
+			int (*nv_get_property)(void*, void*, sensor_info*, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_property_value");
+			sensor_info info;
+			// Try to print a value for all properties
+			for (uint8_t i=0; i<sizeof(gpu_properties) / sizeof(char**); i++) {
+				retval = nv_get_property(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &info, i, gpu_list[idx].nvidia_index);
+				if (retval != 0) {
+					continue;
+				}
+				// Display the correct data type
+				switch (info.sensor_data_type) {
+					case SENSOR_TYPE_UINT:
+						printf("\t%s: %u %s\n", gpu_properties[i], info.readings.u_reading, gpu_property_units[i]);
+						break;
+					default:
+						break;
+				}
+			}
 	}
 
 	return 0;

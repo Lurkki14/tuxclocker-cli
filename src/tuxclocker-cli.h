@@ -35,6 +35,9 @@ int print_gpu_names();
 // Print available sensors for GPU by index. Print for all GPU's if idx < 0
 int print_gpu_sensor_values();
 
+// Print other information related to GPU by index.
+int print_gpu_properties();
+
 // Assign a value for a tunable by GPU index
 int assign_gpu_tunable();
 
