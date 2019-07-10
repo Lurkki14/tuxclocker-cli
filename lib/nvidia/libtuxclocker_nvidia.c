@@ -318,3 +318,44 @@ int_value_from_nvctrl:
 	return 0;
 }
 
+int tc_nvidia_get_tunable_value(void *nvml_handle, void *nvctrl_handle, int *tunable_value, int tunable_enum, int gpu_index, int pstate_index) {
+	int target_enum = 0;
+	switch (tunable_enum) {
+		case TUNABLE_POWER_LIMIT: ;
+			uint32_t reading = 0;
+			nvmlReturn_t retval = nvmlDeviceGetPowerManagementLimit(*(nvmlDevice_t*) nvml_handle, &reading);
+			*tunable_value = reading / 1000;
+			return retval;
+		case TUNABLE_CORE_CLOCK:
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			tunable_enum = NV_CTRL_GPU_NVCLOCK_OFFSET;
+			goto value_from_nvctrl;
+		case TUNABLE_MEMORY_CLOCK:
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			tunable_enum = NV_CTRL_GPU_MEM_TRANSFER_RATE_OFFSET;
+			goto value_from_nvctrl;
+		case TUNABLE_CORE_VOLTAGE:
+			target_enum = NV_CTRL_TARGET_TYPE_GPU;
+			tunable_enum = NV_CTRL_GPU_OVER_VOLTAGE_OFFSET;
+			goto value_from_nvctrl;
+		default:
+			return 1;
+	}
+value_from_nvctrl: ;
+	Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, target_enum, gpu_index, pstate_index, tunable_enum, tunable_value);
+	if (!retval) {
+		return 1;
+	}
+	// Convert some values
+	switch (tunable_enum) {
+		case NV_CTRL_GPU_MEM_TRANSFER_RATE_OFFSET:
+			*tunable_value /= 2;
+			break;
+		case NV_CTRL_GPU_OVER_VOLTAGE_OFFSET:
+			*tunable_value /= 1000;
+			break;
+		default:
+			break;
+	}
+	return 0;
+}

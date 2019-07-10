@@ -36,4 +36,6 @@ char *tc_nvidia_nvml_error_string_from_retval(int nvml_retval);
 // Get a GPU property specified by prop_enum
 int tc_nvidia_get_property_value(void *nvml_handle, void *nvctrl_handle, sensor_info *info, int prop_enum, int gpu_index);
 
+// Get the current value of a tunable
+int tc_nvidia_get_tunable_value(void *nvml_handle, void *nvctrl_handle, int *tunable_value, int tunable_enum, int gpu_index, int pstate_index);
 #endif

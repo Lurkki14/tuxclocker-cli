@@ -414,6 +414,7 @@ int list_tunables() {
 		return 1;
 	}
 
+	int cur_val_retval = 0;
 	int retval = 0;
 	printf("Available tunables for GPU %u:\n", idx);
 	switch (gpu_list[idx].gpu_type) {
@@ -429,12 +430,22 @@ int list_tunables() {
 			}
 		case NVIDIA: {
 			tunable_valid_range range;
+			int tunable_value = 0;
 			int (*nvidia_get_range)(void*, void*, tunable_valid_range*, int, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_tunable_range");
+			int (*nvidia_get_value)(void*, void*, int*, int, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_tunable_value");
 			for (uint8_t i=0; i<sizeof(tunable_names) / sizeof(char**); i++) {
 					retval = nvidia_get_range(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &range, i, gpu_list[idx].nvidia_index, gpu_list[idx].nvidia_pstate_count - 1);
+					cur_val_retval = nvidia_get_value(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &tunable_value, i, gpu_list[idx].nvidia_index, gpu_list[idx].nvidia_pstate_count - 1);
 					if (retval == 0) {
-						printf("\t%s: range %d - %d %s, Value type: %s\n", tunable_names[i], range.min, range.max, tunable_units[i], tunable_value_type_names[range.tunable_value_type]);
-	
+						printf("\t%s: range %d - %d %s, Value type: %s", tunable_names[i], range.min, range.max, tunable_units[i], tunable_value_type_names[range.tunable_value_type]);
+					}
+					// Also print the current value if querying it was successful
+					if (cur_val_retval == 0) {
+						printf(", Current Value: %d %s", tunable_value, tunable_units[i]);
+					}
+					if (retval == 0 || cur_val_retval == 0) {
+						// Print a newline if some info was printed
+						printf("\n");
 					}
 			}
 		}
