@@ -47,6 +47,12 @@ int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
 	char **paths = NULL;
 	while ((dev_entry = readdir(dev_dir)) != NULL) {
 		if (strstr(dev_entry->d_name, "renderD") != NULL) {
+			// Check if amdgpu is loaded for this device
+			if (!check_for_loaded_driver_by_dev(dev_entry->d_name, "amdgpu")) {
+				// amdgpu wasn't loaded for this device
+				continue;
+			}
+
 			size_t dir_strlen = strlen(dev_dir_name);
 			snprintf(dev_abs_path, 128 - dir_strlen, "%s/%s", dev_dir_name, dev_entry->d_name);
 
@@ -101,6 +107,29 @@ int tc_amd_get_fs_info_all(char ***hwmon_paths, int **fds, uint8_t *gpu_count) {
 	closedir(dev_dir);	
 	*gpu_count = amount;
 	return 0;
+}
+
+bool check_for_loaded_driver_by_dev(const char *renderd_name, const char *module_name) {
+	// Open the /sys/class/drm/<renderD>/device/driver/module/drivers dir and check if it contains the entry
+	char mod_path[256];
+	size_t path_len = strlen("/sys/class/drm//device/driver/module/drivers");
+	snprintf(mod_path, 256 - path_len, "/sys/class/drm/%s/device/driver/module/drivers", renderd_name);
+	
+	DIR *mod_dir = opendir(mod_path);
+	if (mod_dir == NULL) {
+		return false;
+	}
+	struct dirent *mod_entry;
+
+	while ((mod_entry = readdir(mod_dir)) != NULL) {
+		// Check if entry contains module_name
+		if (strstr(mod_entry->d_name, module_name) != NULL) {
+			closedir(mod_dir);
+			return true;
+		}
+	}
+	closedir(mod_dir);
+	return false;
 }
 
 bool contains_digit(const char *string) {

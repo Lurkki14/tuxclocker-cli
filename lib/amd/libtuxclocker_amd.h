@@ -55,4 +55,6 @@ void pstate_info_from_line(const char *line, amd_pstate_info *info, int section_
 // Read the limits in OD_RANGE
 void pstate_limit_info_from_line(const char *line, amd_pstate_info *info);
 
+// Check if renderD* device file has a kernel module named search_name loaded. Return true when a match was found.
+bool check_for_loaded_driver_by_dev(const char *renderd_name, const char *module_name);
 #endif
