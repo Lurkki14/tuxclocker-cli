@@ -464,7 +464,7 @@ power_limit_from_files: ;
 	return 0;
 }	
 
-int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, const char *hwmon_dir_name) {
+int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, int file_des, const char *hwmon_dir_name) {
 	int sensor_enum = 0;
 	int retval = 0;
 	switch (sensor_type) {
@@ -474,7 +474,8 @@ int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, con
 		case SENSOR_CORE_VOLTAGE : sensor_enum = AMDGPU_INFO_SENSOR_VDDGFX; break;
 		case SENSOR_CORE_UTILIZATION : sensor_enum = AMDGPU_INFO_SENSOR_GPU_LOAD; break;
 		case SENSOR_POWER_DRAW : sensor_enum = AMDGPU_INFO_SENSOR_GPU_AVG_POWER; break;
-		case SENSOR_FAN_PERCENTAGE : goto sensor_file;			 
+		case SENSOR_FAN_PERCENTAGE : goto sensor_file;
+		case SENSOR_MEMORY_MB_USAGE : sensor_enum = AMDGPU_INFO_VRAM_USAGE; goto sensor_ioctl;
 		default : return 1;
 	}
 	amdgpu_device_handle *dev_handle = (amdgpu_device_handle*) handle;
@@ -485,7 +486,22 @@ int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, con
 		default : return retval;
 		case SENSOR_TEMP : *reading /= 1000; return retval;
 	}
-// Label for sensor enums that are read from a file	
+// Label for sensor enums that are read through ioctl
+sensor_ioctl: ; 	
+	struct drm_amdgpu_info drm_info;
+	uint64_t _reading = 0;
+	drm_info.query = sensor_enum;
+	drm_info.return_pointer = _reading;
+	drm_info.return_size = sizeof(uint64_t);
+
+	if (ioctl(file_des, DRM_IOCTL_AMDGPU_INFO, &drm_info) != -1) {
+		// Success
+		*reading = _reading;
+		return 0;
+	}
+	return 1;
+
+// Label for enums that are read from a file	
 sensor_file:
 	// Change directory to the hwmon directory
 	retval = chdir(hwmon_dir_name);

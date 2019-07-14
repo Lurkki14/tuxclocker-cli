@@ -24,7 +24,7 @@ int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle);
 /* Monitoring function. This requires a device handle and a pointer to return the data.
    Returns zero on success like amdgpu functions themselves.	
 */
-int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, const char *hwmon_dir_name);
+int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, int file_des, const char *hwmon_dir_name);
 
 // Return 0 on success. Pass the buffer for the string to be copied to and its size
 int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]);

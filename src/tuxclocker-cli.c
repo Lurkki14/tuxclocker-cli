@@ -330,10 +330,10 @@ int print_gpu_sensor_values() {
 	printf("Sensor readings for GPU %d:\n", idx);
 	switch (gpu_list[idx].gpu_type) {
 		case AMD: ;
-			int (*amd_get_sensor)(void*, int*, int, const char*) = dlsym(libtc_amd, "tc_amd_get_gpu_sensor_value");
+			int (*amd_get_sensor)(void*, int*, int, int, const char*) = dlsym(libtc_amd, "tc_amd_get_gpu_sensor_value");
 			// Try to print a value for all sensor enums
 			for (int i=0; i<sizeof(sensor_names) / sizeof(char**); i++) {
-				retval = amd_get_sensor(gpu_list[idx].amd_handle, &reading, i, gpu_list[idx].hwmon_path);
+				retval = amd_get_sensor(gpu_list[idx].amd_handle, &reading, i, gpu_list[idx].fd, gpu_list[idx].hwmon_path);
 				if (retval == 0) {
 					printf("\t%s: %d %s\n", sensor_names[i], reading, sensor_units[i]);
 				}
