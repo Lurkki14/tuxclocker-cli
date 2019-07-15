@@ -401,6 +401,15 @@ int print_gpu_properties() {
 	return 0;
 }
 
+char *get_tunable_range_string(int tunable_enum, int min, int max, int value_type, int cur_value, bool show_cur) {
+	char *range_string = malloc(sizeof(char) * 256);
+	char cur_string[256];
+	snprintf(cur_string, 256, ", Current value: %d %s", cur_value, tunable_units[tunable_enum]);
+
+	snprintf(range_string, 256, "%s: range %d - %d %s, Value type: %s%s", tunable_names[tunable_enum], min, max, tunable_units[tunable_enum], tunable_value_type_names[value_type], (show_cur) ? cur_string : "");
+	return range_string;
+}
+
 int list_tunables() {
 	// Setup GPUs
 	for (uint8_t i=0; i<gpu_handler_list_len; i++) {
@@ -429,21 +438,18 @@ int list_tunables() {
 		case NVIDIA: {
 			tunable_valid_range range;
 			int tunable_value = 0;
+			char *range_string = NULL;
 			int (*nvidia_get_range)(void*, void*, tunable_valid_range*, int, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_tunable_range");
 			int (*nvidia_get_value)(void*, void*, int*, int, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_tunable_value");
 			for (uint8_t i=0; i<sizeof(tunable_names) / sizeof(char**); i++) {
 					retval = nvidia_get_range(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &range, i, gpu_list[idx].nvidia_index, gpu_list[idx].nvidia_pstate_count - 1);
 					cur_val_retval = nvidia_get_value(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &tunable_value, i, gpu_list[idx].nvidia_index, gpu_list[idx].nvidia_pstate_count - 1);
+					
 					if (retval == 0) {
-						printf("\t%s: range %d - %d %s, Value type: %s", tunable_names[i], range.min, range.max, tunable_units[i], tunable_value_type_names[range.tunable_value_type]);
-					}
-					// Also print the current value if querying it was successful
-					if (cur_val_retval == 0) {
-						printf(", Current Value: %d %s", tunable_value, tunable_units[i]);
-					}
-					if (retval == 0 || cur_val_retval == 0) {
-						// Print a newline if some info was printed
-						printf("\n");
+						// Use the negation of cur_val_retval to not show the current value when querying it was not successful
+						range_string = get_tunable_range_string(i, range.min, range.max, range.tunable_value_type, tunable_value, !cur_val_retval);
+						printf("\t%s\n", range_string);
+						free(range_string);
 					}
 			}
 		}

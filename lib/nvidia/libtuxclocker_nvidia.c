@@ -147,6 +147,20 @@ int tc_nvidia_get_tunable_range(void *nvml_handle, void *nvctrl_handle, tunable_
 		case TUNABLE_FAN_SPEED_PERCENTAGE:
 			tunable_enum = NV_CTRL_GPU_COOLER_MANUAL_CONTROL;
 			goto range_from_nvctrl;
+		case TUNABLE_FAN_MODE: {
+			NVCTRLAttributeValidValuesRec values;
+			// Check if manual control is available, don't set the range but only return 0 for success
+			Bool retval = XNVCTRLQueryValidTargetAttributeValues((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, 0, NV_CTRL_GPU_COOLER_MANUAL_CONTROL, &values);
+
+			if (!retval) {
+				return 1;
+			}
+			if ((values.permissions & ATTRIBUTE_TYPE_WRITE) == ATTRIBUTE_TYPE_WRITE) {
+				// Fanmode is writable
+				return 0;
+			}
+			return 1;
+			}
 		default:
 			return 1;
 	}

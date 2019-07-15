@@ -59,4 +59,6 @@ bool contains_alpha(const char *str);
 // Function to check if a GPU by an index exists. Returns the index if idx_char is valid and -1 when not.
 int get_gpu_index(uint8_t gpu_count, char *idx_char);
 
+// Get the string representation for a tunable range. When show_cur is true, the current value of the tunable is printed to the string.
+char *get_tunable_range_string(int tunable_enum, int min, int max, int value_type, int cur_value, bool show_cur);
 #endif
