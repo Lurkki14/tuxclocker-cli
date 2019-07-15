@@ -4,12 +4,12 @@
 // Enums for types of sensor reading
 enum sensor_type {SENSOR_TEMP, SENSOR_FAN_PERCENTAGE, SENSOR_FAN_RPM, SENSOR_CORE_CLOCK, SENSOR_CORE_VOLTAGE, 
 	SENSOR_POWER_DRAW, SENSOR_CORE_UTILIZATION, SENSOR_MEMORY_CLOCK, SENSOR_MEMORY_UTILIZATION,
-	SENSOR_MEMORY_MB_USAGE};
+	SENSOR_MEMORY_MB_USAGE, SENSOR_PCIE_UTILIZATION};
 
 // Enums for querying various other GPU properties eg. total VRAM
-enum gpu_property {PROPERTY_TOTAL_VRAM, PROPERTY_THROTTLE_TEMP, PROPERTY_GPU_CORE_COUNT, PROPERTY_MEM_BUS_WIDTH, PROPERTY_PCIE_MAX_LINK_SPEED, PROPERTY_PCIE_GEN, PROPERTY_PCIE_LINK_WIDTH, PROPERTY_PCIE_CUR_LINK_SPEED};
-static char *const gpu_properties[] = {"Total VRAM", "Throttle Temperature", "GPU Core Count", "Memory Bus Width", "Max PCIe Link Speed", "PCIe Generation", "PCIe Link Width", "Current PCIe Link Speed"};
-static char *const gpu_property_units[] =  {"MB", "°C", "", "Bits", "GT/s", "", "Lanes", "GT/s"};
+enum gpu_property {PROPERTY_TOTAL_VRAM, PROPERTY_THROTTLE_TEMP, PROPERTY_SHUTDOWN_TEMP, PROPERTY_GPU_CORE_COUNT, PROPERTY_MEM_BUS_WIDTH, PROPERTY_PCIE_MAX_LINK_SPEED, PROPERTY_PCIE_GEN, PROPERTY_PCIE_LINK_WIDTH, PROPERTY_PCIE_CUR_LINK_SPEED};
+static char *const gpu_properties[] = {"Total VRAM", "Throttle Temperature", "Shutdown Temperature", "GPU Core Count", "Memory Bus Width", "Max PCIe Link Speed", "PCIe Generation", "PCIe Link Width", "Current PCIe Link Speed"};
+static char *const gpu_property_units[] =  {"MB", "°C", "°C", "Bits", "GT/s", "", "Lanes", "GT/s"};
 
 // Enums for modifying GPU parameters
 enum tunable_type {TUNABLE_FAN_SPEED_PERCENTAGE, TUNABLE_FAN_MODE, TUNABLE_POWER_LIMIT, TUNABLE_CORE_CLOCK, TUNABLE_MEMORY_CLOCK,
@@ -28,9 +28,9 @@ static char *const fan_mode_arg_names[] = {"auto", "manual"};
 
 // Sensor names for displaying values
 static char *const sensor_names[] = {"Temperature", "Fan Speed", "Fan Speed", "Core Clock", "Core Voltage", "Power Draw",
-        "Core Utilization", "Memory Clock", "Memory Utilization", "Memory Usage"};
+        "Core Utilization", "Memory Clock", "Memory Utilization", "Memory Usage", "PCIe Utilization"};
 // Units for displaying values
-static char *const sensor_units[] = {"°C", "%", "RPM", "MHz", "mV", "W", "%", "MHz", "%", "MB"};
+static char *const sensor_units[] = {"°C", "%", "RPM", "MHz", "mV", "W", "%", "MHz", "%", "MB", "%"};
 
 // Tunable names to be taken in as arguments
 static char *const tunable_arg_names[] = {"fanspeed", "fanmode", "powerlimit", "coreclock", "memclock", "corevoltage", "memvoltage"};

@@ -261,12 +261,17 @@ int tc_nvidia_get_property_value(void *nvml_handle, void *nvctrl_handle, sensor_
 			target_enum = NV_CTRL_TARGET_TYPE_GPU;
 			goto int_value_from_nvctrl;
 		// Broken
-		/*
-		case PROPERTY_THROTTLE_TEMP:
-			prop_enum = NV_CTRL_GPU_CORE_THRESHOLD;
-			target_enum = NV_CTRL_TARGET_TYPE_GPU;
-			goto int_value_from_nvctrl;
-		*/
+		
+		case PROPERTY_THROTTLE_TEMP: ; {
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			nvmlReturn_t retval = nvmlDeviceGetTemperatureThreshold(*(nvmlDevice_t*) nvml_handle, NVML_TEMPERATURE_THRESHOLD_SLOWDOWN, &(info->readings.u_reading));
+			return retval;
+		}
+		case PROPERTY_SHUTDOWN_TEMP: ; {
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			nvmlReturn_t retval = nvmlDeviceGetTemperatureThreshold(*(nvmlDevice_t*) nvml_handle, NVML_TEMPERATURE_THRESHOLD_SHUTDOWN, &(info->readings.u_reading));
+			return retval;
+		}
 		case PROPERTY_PCIE_GEN:
 			prop_enum = NV_CTRL_GPU_PCIE_GENERATION;
 			target_enum = NV_CTRL_TARGET_TYPE_GPU;
