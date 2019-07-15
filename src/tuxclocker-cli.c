@@ -446,10 +446,17 @@ int list_tunables() {
 					cur_val_retval = nvidia_get_value(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &tunable_value, i, gpu_list[idx].nvidia_index, gpu_list[idx].nvidia_pstate_count - 1);
 					
 					if (retval == 0) {
-						// Use the negation of cur_val_retval to not show the current value when querying it was not successful
-						range_string = get_tunable_range_string(i, range.min, range.max, range.tunable_value_type, tunable_value, !cur_val_retval);
-						printf("\t%s\n", range_string);
-						free(range_string);
+						// Don't print range for fan mode
+						switch (i) {
+							case TUNABLE_FAN_MODE:
+								printf("\t%s: Values: auto, manual\n", tunable_names[i]);
+							default:
+								// Use the negation of cur_val_retval to not show the current value when querying it was not successful
+								range_string = get_tunable_range_string(i, range.min, range.max, range.tunable_value_type, tunable_value, !cur_val_retval);
+								printf("\t%s\n", range_string);
+								free(range_string);
+								break;
+						}
 					}
 			}
 		}
