@@ -357,6 +357,17 @@ int tc_nvidia_get_tunable_value(void *nvml_handle, void *nvctrl_handle, int *tun
 			target_enum = NV_CTRL_TARGET_TYPE_GPU;
 			tunable_enum = NV_CTRL_GPU_OVER_VOLTAGE_OFFSET;
 			goto value_from_nvctrl;
+		case TUNABLE_FAN_MODE: {
+			int fanmode_mask = 0;
+			Bool retval = XNVCTRLQueryTargetAttribute((Display*) nvctrl_handle, NV_CTRL_TARGET_TYPE_GPU, gpu_index, 0, NV_CTRL_GPU_COOLER_MANUAL_CONTROL, &fanmode_mask);
+			
+			if (!retval) {
+				return 1;
+			}
+			// Assign the correct fanmode enum for *reading
+			*tunable_value = (fanmode_mask & NV_CTRL_GPU_COOLER_MANUAL_CONTROL_TRUE) == NV_CTRL_GPU_COOLER_MANUAL_CONTROL_TRUE ? FAN_MODE_MANUAL : FAN_MODE_AUTO;
+			return 1;
+			}
 		default:
 			return 1;
 	}

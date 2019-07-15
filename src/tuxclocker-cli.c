@@ -449,7 +449,8 @@ int list_tunables() {
 						// Don't print range for fan mode
 						switch (i) {
 							case TUNABLE_FAN_MODE:
-								printf("\t%s: Values: auto, manual\n", tunable_names[i]);
+								printf("\t%s: Values: auto, manual, Current value: %s\n", tunable_names[i], fan_mode_arg_names[tunable_value]);
+								break;
 							default:
 								// Use the negation of cur_val_retval to not show the current value when querying it was not successful
 								range_string = get_tunable_range_string(i, range.min, range.max, range.tunable_value_type, tunable_value, !cur_val_retval);
