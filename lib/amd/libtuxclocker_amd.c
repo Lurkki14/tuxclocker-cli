@@ -134,10 +134,9 @@ bool check_for_loaded_driver_by_dev(const char *renderd_name, const char *module
 
 bool contains_digit(const char *string) {
 	while (*string != '\0') {
-		if (isdigit(*string) != 0) {
+		if (isdigit(*string++) != 0) {
 			return true;
 		}
-		*string++;
 	}
 	return false;
 }

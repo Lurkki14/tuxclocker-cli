@@ -168,19 +168,17 @@ int main(int argc, char **argv) {
 }
 
 bool contains_digit(const char *str) {
-	while (*str) {
-		if (isdigit(*str) != 0)
+	while (*str != '\0') {
+		if (isdigit(*str++) != 0)
 			return true;
-		*str++;
 	}
 	return false;
 }
 
 bool contains_alpha(const char *str) {
-	while (*str) {
-		if (isalpha(*str) != 0)
+	while (*str != '\0') {
+		if (isalpha(*str++) != 0)
 			return true;
-		*str++;
 	}
 	return false;
 }
