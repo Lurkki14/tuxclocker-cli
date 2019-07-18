@@ -7,9 +7,9 @@ enum sensor_type {SENSOR_TEMP, SENSOR_FAN_PERCENTAGE, SENSOR_FAN_RPM, SENSOR_COR
 	SENSOR_MEMORY_MB_USAGE, SENSOR_PCIE_UTILIZATION};
 
 // Enums for querying various other GPU properties eg. total VRAM
-enum gpu_property {PROPERTY_TOTAL_VRAM, PROPERTY_THROTTLE_TEMP, PROPERTY_SHUTDOWN_TEMP, PROPERTY_GPU_CORE_COUNT, PROPERTY_MEM_BUS_WIDTH, PROPERTY_PCIE_MAX_LINK_SPEED, PROPERTY_PCIE_GEN, PROPERTY_PCIE_LINK_WIDTH, PROPERTY_PCIE_CUR_LINK_SPEED};
-static char *const gpu_properties[] = {"Total VRAM", "Throttle Temperature", "Shutdown Temperature", "GPU Core Count", "Memory Bus Width", "Max PCIe Link Speed", "PCIe Generation", "PCIe Link Width", "Current PCIe Link Speed"};
-static char *const gpu_property_units[] =  {"MB", "°C", "°C", "", "Bits", "GT/s", "", "Lanes", "GT/s"};
+enum gpu_property {PROPERTY_UUID, PROPERTY_TOTAL_VRAM, PROPERTY_THROTTLE_TEMP, PROPERTY_SHUTDOWN_TEMP, PROPERTY_GPU_CORE_COUNT, PROPERTY_MEM_BUS_WIDTH, PROPERTY_PCIE_MAX_LINK_SPEED, PROPERTY_PCIE_GEN, PROPERTY_PCIE_LINK_WIDTH, PROPERTY_PCIE_CUR_LINK_SPEED};
+static char *const gpu_properties[] = {"UUID", "Total VRAM", "Throttle Temperature", "Shutdown Temperature", "GPU Core Count", "Memory Bus Width", "Max PCIe Link Speed", "PCIe Generation", "PCIe Link Width", "Current PCIe Link Speed"};
+static char *const gpu_property_units[] =  {"", "MB", "°C", "°C", "", "Bits", "GT/s", "", "Lanes", "GT/s"};
 
 // Enums for modifying GPU parameters
 enum tunable_type {TUNABLE_FAN_SPEED_PERCENTAGE, TUNABLE_FAN_MODE, TUNABLE_POWER_LIMIT, TUNABLE_CORE_CLOCK, TUNABLE_MEMORY_CLOCK,
@@ -41,11 +41,12 @@ enum amd_pstate_type {PSTATE_CORE, PSTATE_MEMORY};
 static char *const amd_pstate_type_args[] = {"core", "mem"};
 
 // Data types for getting sensor readings with different data types
-enum sensor_data_type {SENSOR_TYPE_UINT, SENSOR_TYPE_DOUBLE};
+enum sensor_data_type {SENSOR_TYPE_UINT, SENSOR_TYPE_DOUBLE, SENSOR_TYPE_STRING};
 
 union sensor_readings {
 	double d_reading;
 	uint32_t u_reading;
+	char *s_reading;
 };
 
 typedef struct {

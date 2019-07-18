@@ -270,6 +270,11 @@ char *tc_nvidia_nvml_error_string_from_retval(int nvml_retval) {
 int tc_nvidia_get_property_value(void *nvml_handle, void *nvctrl_handle, sensor_info *info, int prop_enum, int gpu_index) {
 	int target_enum = 0;
 	switch (prop_enum) {
+		/*case PROPERTY_UUID: {
+			info->sensor_data_type = SENSOR_TYPE_STRING;
+			nvmlReturn_t retval = nvmlDeviceGetUUID(*(nvmlDevice_t*) nvml_handle, info->readings.s_reading, info->max_strlen);
+			return retval;
+		}*/
 		case PROPERTY_TOTAL_VRAM:
 			prop_enum = NV_CTRL_TOTAL_DEDICATED_GPU_MEMORY;
 			target_enum = NV_CTRL_TARGET_TYPE_GPU;

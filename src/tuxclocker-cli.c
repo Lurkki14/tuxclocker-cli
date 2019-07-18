@@ -8,6 +8,7 @@
 #include <errno.h>
 
 #include "../lib/libtuxclocker.h"
+#include "utils.h"
 #include "amd_functions.h"
 #include "nvidia_functions.h"
 #include "tuxclocker-cli.h"
@@ -48,9 +49,13 @@ typedef struct _opt_node {
 } opt_node;
 
 int main(int argc, char **argv) {
-	// Check for the existence of usable libraries
-	libtc_amd = dlopen("libtuxclocker_amd.so", RTLD_NOW);
-	libtc_nvidia = dlopen("libtuxclocker_nvidia.so", RTLD_NOW);
+	// Check for the existence of usable libraries and that the driver they use is loaded
+	if (is_module_loaded("amdgpu")) {
+		libtc_amd = dlopen("libtuxclocker_amd.so", RTLD_NOW);
+	}
+	if (is_module_loaded("nvidia")) {
+		libtc_nvidia = dlopen("libtuxclocker_nvidia.so", RTLD_NOW);
+	}
 
 	if (libtc_amd == NULL && libtc_nvidia == NULL) {
 		fprintf(stderr, "Error: no usable libraries found, exiting...\n");
