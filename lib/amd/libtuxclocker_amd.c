@@ -482,9 +482,13 @@ int tc_amd_get_gpu_sensor_value(void *handle, sensor_info *info, int sensor_type
 			sensor_enum = AMDGPU_INFO_SENSOR_GFX_MCLK;
 			break;
 		case SENSOR_CORE_VOLTAGE:
+			// Query the northbridge (APU) voltage if querying GPU voltage fails
 			info->sensor_data_type = SENSOR_TYPE_UINT;
-			sensor_enum = AMDGPU_INFO_SENSOR_VDDGFX;
-			break;
+			//sensor_enum = AMDGPU_INFO_SENSOR_VDDGFX;
+			if (amdgpu_query_sensor_info(*dev_handle, AMDGPU_INFO_SENSOR_VDDGFX, sizeof(info->readings.u_reading), &(info->readings.u_reading)) == 0) {
+				return 0;
+			}
+			return amdgpu_query_sensor_info(*dev_handle, AMDGPU_INFO_SENSOR_VDDNB, sizeof(info->readings.u_reading), &(info->readings.u_reading));
 		case SENSOR_CORE_UTILIZATION:
 			info->sensor_data_type = SENSOR_TYPE_UINT;
 			sensor_enum = AMDGPU_INFO_SENSOR_GPU_LOAD;
