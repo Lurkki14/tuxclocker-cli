@@ -2,6 +2,7 @@
 #define TUXCLOCKER_CLI_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 
 // Used for some functions that require a size as an argument
 #define  MAX_GPUS 64

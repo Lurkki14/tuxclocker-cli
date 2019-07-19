@@ -463,42 +463,61 @@ power_limit_from_files: ;
 	return 0;
 }	
 
-int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, int file_des, const char *hwmon_dir_name) {
+int tc_amd_get_gpu_sensor_value(void *handle, sensor_info *info, int sensor_type, const char *hwmon_dir_name) {
 	int sensor_enum = 0;
 	int retval = 0;
+	amdgpu_device_handle *dev_handle = (amdgpu_device_handle*) handle;
+
 	switch (sensor_type) {
-		case SENSOR_TEMP : sensor_enum = AMDGPU_INFO_SENSOR_GPU_TEMP; break;
-		case SENSOR_CORE_CLOCK : sensor_enum = AMDGPU_INFO_SENSOR_GFX_SCLK; break;			     
-		case SENSOR_MEMORY_CLOCK : sensor_enum = AMDGPU_INFO_SENSOR_GFX_MCLK; break;
-		case SENSOR_CORE_VOLTAGE : sensor_enum = AMDGPU_INFO_SENSOR_VDDGFX; break;
-		case SENSOR_CORE_UTILIZATION : sensor_enum = AMDGPU_INFO_SENSOR_GPU_LOAD; break;
-		case SENSOR_POWER_DRAW : sensor_enum = AMDGPU_INFO_SENSOR_GPU_AVG_POWER; break;
-		case SENSOR_FAN_PERCENTAGE : goto sensor_file;
-		case SENSOR_MEMORY_MB_USAGE : sensor_enum = AMDGPU_INFO_VRAM_USAGE; goto sensor_ioctl;
+		case SENSOR_TEMP:
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			sensor_enum = AMDGPU_INFO_SENSOR_GPU_TEMP;
+			break;
+		case SENSOR_CORE_CLOCK:
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			sensor_enum = AMDGPU_INFO_SENSOR_GFX_SCLK;
+			break;			     
+		case SENSOR_MEMORY_CLOCK:
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			sensor_enum = AMDGPU_INFO_SENSOR_GFX_MCLK;
+			break;
+		case SENSOR_CORE_VOLTAGE:
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			sensor_enum = AMDGPU_INFO_SENSOR_VDDGFX;
+			break;
+		case SENSOR_CORE_UTILIZATION:
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			sensor_enum = AMDGPU_INFO_SENSOR_GPU_LOAD;
+			break;
+		case SENSOR_POWER_DRAW:
+			info->sensor_data_type = SENSOR_TYPE_DOUBLE;
+			sensor_enum = AMDGPU_INFO_SENSOR_GPU_AVG_POWER;
+			break;
+		case SENSOR_FAN_PERCENTAGE:
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			goto sensor_file;
+		case SENSOR_MEMORY_MB_USAGE:
+			retval = amdgpu_query_info(*dev_handle, AMDGPU_INFO_VRAM_USAGE, sizeof(info->readings.u_reading), &(info->readings.u_reading));
+			info->readings.u_reading /= 1000000;
+			return retval;
 		default : return 1;
 	}
-	amdgpu_device_handle *dev_handle = (amdgpu_device_handle*) handle;
-	
-	retval = amdgpu_query_sensor_info(*dev_handle, sensor_enum, sizeof(reading), reading);
+	// Use the right data type in getting the sensor reading
+	switch (info->sensor_data_type) {
+		case SENSOR_TYPE_UINT:
+			retval = amdgpu_query_sensor_info(*dev_handle, sensor_enum, sizeof(info->readings.u_reading), &(info->readings.u_reading));
+			break;
+		case SENSOR_TYPE_DOUBLE:
+			retval = amdgpu_query_sensor_info(*dev_handle, sensor_enum, sizeof(info->readings.d_reading), &(info->readings.d_reading));
+			break;
+		default:
+			return 1;
+	}
 	// Change some reading values to be in line with the units defined in libtuxclocker.h
 	switch (sensor_type) {
 		default : return retval;
-		case SENSOR_TEMP : *reading /= 1000; return retval;
+		case SENSOR_TEMP : info->readings.u_reading /= 1000; return retval;
 	}
-// Label for sensor enums that are read through ioctl
-sensor_ioctl: ; 	
-	struct drm_amdgpu_info drm_info;
-	uint64_t _reading = 0;
-	drm_info.query = sensor_enum;
-	drm_info.return_pointer = _reading;
-	drm_info.return_size = sizeof(uint64_t);
-
-	if (ioctl(file_des, DRM_IOCTL_AMDGPU_INFO, &drm_info) != -1) {
-		// Success
-		*reading = _reading;
-		return 0;
-	}
-	return 1;
 
 // Label for enums that are read from a file	
 sensor_file:
@@ -517,17 +536,27 @@ sensor_file:
 				return 1;	
 			}
 
-			fscanf(s_file, "%d", reading);
-			*reading = (int) *reading / 2.55;
+			fscanf(s_file, "%u", &(info->readings.u_reading));
+			info->readings.u_reading /= 2.55;
 			return 0;
 		default : return 1;
 	}
-	/*
-	FILE *file = fopen("pwm1", "r");
-	fscanf(file, "%d", reading);
-	*reading /= 2.55;
-	*/
 	return 0;
+}
+
+int tc_amd_get_property_value(void *handle, int prop_enum, sensor_info *info) {
+	amdgpu_device_handle amd_handle = *(amdgpu_device_handle*) handle;
+	int retval = 0;
+	switch (prop_enum) {
+		case PROPERTY_TOTAL_VRAM:
+			info->sensor_data_type = SENSOR_TYPE_UINT;
+			retval = amdgpu_query_info(amd_handle, AMDGPU_INFO_VRAM_GTT, sizeof(info->readings.u_reading), &(info->readings.u_reading));
+			info->readings.u_reading /= 1000000;
+			return retval;
+		default:
+			return 1;
+	}
+	return 1;
 }
 
 int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]) {	

@@ -24,7 +24,7 @@ int tc_amd_get_gpu_handle_by_fd(int fd, size_t size, void *handle);
 /* Monitoring function. This requires a device handle and a pointer to return the data.
    Returns zero on success like amdgpu functions themselves.	
 */
-int tc_amd_get_gpu_sensor_value(void *handle, int *reading, int sensor_type, int file_des, const char *hwmon_dir_name);
+int tc_amd_get_gpu_sensor_value(void *handle, sensor_info *info, int sensor_type, const char *hwmon_dir_name);
 
 // Return 0 on success. Pass the buffer for the string to be copied to and its size
 int tc_amd_get_gpu_name(void *handle, size_t buf_len, char (*buf)[]);
@@ -43,6 +43,9 @@ int tc_amd_get_tunable_range(int tunable_enum, const char *hwmon_dir_name, tunab
 
 // Assign a pstate
 int tc_amd_assign_pstate(int pstate_type, uint8_t index, uint32_t clock, uint32_t voltage, const char *hwmon_dir_name); 
+
+// Query non-sensor information such as total VRAM
+int tc_amd_get_property_value(void *handle, int prop_enum, sensor_info *info);
 
 // Internal functions
 // Return true if string contains a digit

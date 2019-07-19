@@ -1,8 +1,10 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
+#include "tuxclocker-cli.h"
 #include "utils.h"
 
 bool is_module_loaded(const char *module_name) {
@@ -25,3 +27,17 @@ bool is_module_loaded(const char *module_name) {
 	free(line);
 	return false;
 }
+
+char *get_value_and_unit_string(sensor_info info, const char *name, const char *unit) {
+	char string[256];
+	// Print the correct data type
+	switch (info.sensor_data_type) {
+		case SENSOR_TYPE_UINT:
+			snprintf(string, 256, "%s: %u %s", name, info.readings.u_reading, unit);
+			return strdup(string);
+		default:
+			return NULL;
+	}
+	return NULL;
+}
+

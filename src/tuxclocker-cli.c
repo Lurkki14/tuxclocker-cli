@@ -330,20 +330,27 @@ int print_gpu_sensor_values() {
 
 	int retval = 0;
 	int reading = 0;
+	sensor_info info;
+	char *info_string = NULL;
 	printf("Sensor readings for GPU %d:\n", idx);
 	switch (gpu_list[idx].gpu_type) {
 		case AMD: ;
-			int (*amd_get_sensor)(void*, int*, int, int, const char*) = dlsym(libtc_amd, "tc_amd_get_gpu_sensor_value");
+			int (*amd_get_sensor)(void*, sensor_info*, int, const char*) = dlsym(libtc_amd, "tc_amd_get_gpu_sensor_value");
 			// Try to print a value for all sensor enums
 			for (int i=0; i<sizeof(sensor_names) / sizeof(char**); i++) {
-				retval = amd_get_sensor(gpu_list[idx].amd_handle, &reading, i, gpu_list[idx].fd, gpu_list[idx].hwmon_path);
-				if (retval == 0) {
-					printf("\t%s: %d %s\n", sensor_names[i], reading, sensor_units[i]);
+				retval = amd_get_sensor(gpu_list[idx].amd_handle, &info, i, gpu_list[idx].hwmon_path);
+				if (retval != 0) {
+					continue;
 				}
+				if ((info_string = get_value_and_unit_string(info, sensor_names[i], sensor_units[i])) == NULL) {
+					continue;
+				}
+				printf("\t%s\n", info_string);
+				free(info_string);
 			}
+			break;
 		case NVIDIA: ;
 			int (*nvidia_get_sensor)(void*, void*, sensor_info*, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_sensor_value");
-			sensor_info info;
 			for (uint8_t i=0; i<sizeof(sensor_names) / sizeof(char**); i++) {
 				retval = nvidia_get_sensor(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &info, i, gpu_list[idx].nvidia_index);
 				if (retval != 0) {
@@ -361,6 +368,7 @@ int print_gpu_sensor_values() {
 						break;
 				}
 			}
+			break;
 		default:
 			return 1;
 	}
@@ -381,11 +389,29 @@ int print_gpu_properties() {
 	}
 
 	int retval = 0;
+	sensor_info info;
+	char *prop_string = NULL;
 	printf("Properties for GPU %d:\n", idx);
 	switch (gpu_list[idx].gpu_type) {
+		case AMD: ;
+			int (*amd_get_property)(void*, int, sensor_info*) = dlsym(libtc_amd, "tc_amd_get_property_value");
+			
+			for (uint8_t i=0; i<sizeof(gpu_properties) / sizeof(char**); i++) {
+				retval = amd_get_property(gpu_list[idx].amd_handle, i, &info);
+
+				if (retval != 0) {
+					continue;
+				}
+				if ((prop_string = get_value_and_unit_string(info, gpu_properties[i], gpu_property_units[i])) == NULL) {
+					// Couldn't get the string
+					continue;
+				}
+				printf("\t%s\n", prop_string);
+				free(prop_string);
+			}
+			break;
 		case NVIDIA: ;
-			int (*nv_get_property)(void*, void*, sensor_info*, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_property_value");
-			sensor_info info;
+			int (*nv_get_property)(void*, void*, sensor_info*, int, int) = dlsym(libtc_nvidia, "tc_nvidia_get_property_value");			
 			// Try to print a value for all properties
 			for (uint8_t i=0; i<sizeof(gpu_properties) / sizeof(char**); i++) {
 				retval = nv_get_property(gpu_list[idx].nvml_handle, gpu_list[idx].nvctrl_handle, &info, i, gpu_list[idx].nvidia_index);
@@ -401,18 +427,19 @@ int print_gpu_properties() {
 						break;
 				}
 			}
+			break;
 	}
 
 	return 0;
 }
 
 char *get_tunable_range_string(int tunable_enum, int min, int max, int value_type, int cur_value, bool show_cur) {
-	char *range_string = malloc(sizeof(char) * 256);
 	char cur_string[256];
+	char range_string[256];
 	snprintf(cur_string, 256, ", Current value: %d %s", cur_value, tunable_units[tunable_enum]);
 
 	snprintf(range_string, 256, "%s: range %d - %d %s, Value type: %s%s", tunable_names[tunable_enum], min, max, tunable_units[tunable_enum], tunable_value_type_names[value_type], (show_cur) ? cur_string : "");
-	return range_string;
+	return strdup(range_string);
 }
 
 int list_tunables() {
